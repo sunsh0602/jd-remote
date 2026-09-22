@@ -1,22 +1,40 @@
 <!doctype html><html lang="ko"><head><meta charset="utf-8"><title>JD Remote 쿠키 도우미</title>
 <style>
-body{font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans KR",sans-serif;margin:0;padding:14px;width:320px;background:#0f1115;color:#e8eaf0}
-h1{font-size:15px;margin:0 0 10px;display:flex;align-items:center;gap:8px}
+body{font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans KR",sans-serif;margin:0;padding:14px;width:330px;background:#0f1115;color:#e8eaf0}
+h1{font-size:15px;margin:0 0 12px;display:flex;align-items:center;gap:8px}
+h1 .gear{margin-left:auto;background:none;border:0;color:#8b93a5;font-size:16px;cursor:pointer;width:auto;padding:4px;margin-top:0}
+.step{display:flex;align-items:center;gap:10px;background:#171a21;border:1px solid #2a2f3a;border-radius:12px;padding:10px 12px;margin-bottom:8px}
+.step .ic{font-size:18px;width:22px;text-align:center}
+.step .t{flex:1;min-width:0}.step .t b{display:block;font-size:13px}.step .t span{font-size:12px;color:#8b93a5}
+.step.ok{border-color:#39c46b33}.step.bad{border-color:#ff5d5d55}
+.step button{width:auto;margin:0;padding:7px 10px;font-size:13px}
 label{display:block;font-size:12px;color:#8b93a5;margin:10px 0 4px}
 input{width:100%;box-sizing:border-box;background:#1c2029;border:1px solid #2a2f3a;border-radius:10px;padding:9px 10px;color:inherit;font:inherit}
 button{width:100%;margin-top:10px;background:#4f8cff;border:0;border-radius:10px;padding:11px;color:#fff;font:inherit;font-weight:600;cursor:pointer}
 button.sec{background:#1c2029;border:1px solid #2a2f3a}
-button:disabled{opacity:.5;cursor:default}
+button.big{padding:14px;font-size:15px}
+button:disabled{opacity:.45;cursor:default}
 #status{margin-top:10px;font-size:13px;min-height:18px;white-space:pre-wrap}
 .ok{color:#39c46b}.bad{color:#ff5d5d}.muted{color:#8b93a5;font-size:12px}
+#settings{border-top:1px solid #2a2f3a;margin-top:12px;padding-top:4px}
+.check{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px}.check input{width:16px;height:16px;margin:0}
+[hidden]{display:none!important}
 </style></head><body>
-<h1>🔑 JD Remote 쿠키 도우미</h1>
-<label>JD Remote 주소</label>
-<input id="server" type="url" placeholder="https://jdr.example.com" autocomplete="off">
-<button class="sec" id="save">주소 저장 (권한 요청)</button>
-<label>TeraBox 계정 이메일 (필수 — JD가 이메일 형식이 아니면 계정을 거부합니다)</label>
-<input id="label" type="email" placeholder="me@example.com" autocomplete="off" required>
-<button id="send">terabox.com 쿠키 → JD Remote 전송</button>
+<h1>🔑 JD Remote 쿠키 도우미 <button class="gear" id="gear" title="설정">⚙</button></h1>
+
+<div class="step" id="stTerabox"><div class="ic">…</div><div class="t"><b>TeraBox 로그인</b><span>확인 중</span></div><button class="sec" id="openTerabox" hidden>로그인 열기</button></div>
+<div class="step" id="stJdr"><div class="ic">…</div><div class="t"><b>JD Remote 로그인</b><span>확인 중</span></div><button class="sec" id="openJdr" hidden>열기</button></div>
+
+<button class="big" id="send" disabled>terabox.com 쿠키 → JD Remote 전송</button>
 <div id="status"></div>
-<p class="muted">순서: ① 이 브라우저로 terabox.com 로그인 ② JD Remote에 로그인된 상태 ③ 위 버튼. 쿠키는 JD Remote 서버로만 전송되고 이 확장은 아무것도 저장하지 않습니다.</p>
-<script src="popup.js"></script></body></html>
+
+<div id="settings" hidden>
+  <label>JD Remote 주소</label>
+  <input id="server" type="url" placeholder="https://jdr.example.com" autocomplete="off">
+  <label>TeraBox 계정 이메일 (JD가 이메일 형식을 요구)</label>
+  <input id="label" type="email" placeholder="me@example.com" autocomplete="off">
+  <div class="check"><input type="checkbox" id="auto"><label for="auto" style="margin:0;color:#e8eaf0">terabox.com 로그인 시 자동 전송 + 알림</label></div>
+  <button class="sec" id="save">저장</button>
+</div>
+<p class="muted" id="hint">쿠키는 JD Remote 서버로만 전송되며 이 확장은 서버 주소·이메일 외에 아무것도 저장하지 않습니다.</p>
+<script src="common.js"></script><script src="popup.js"></script></body></html>

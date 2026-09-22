@@ -1,53 +1,46 @@
-/* JD Remote 쿠키 도우미 — terabox 쿠키를 읽어 JD Remote 의 /api/accounts/terabox/cookies 로 보낸다. */
 (() => {
   const $ = (s) => document.querySelector(s);
   const status = (msg, cls = '') => { const el = $('#status'); el.textContent = msg; el.className = cls; };
-  const TERABOX_DOMAINS = ['terabox.com', '1024terabox.com', 'terabox.app', 'teraboxapp.com'];
+  const setStep = (id, ok, text, btn) => { const el = $(id); el.className = 'step ' + (ok ? 'ok' : 'bad'); el.querySelector('.ic').textContent = ok ? '✅' : '❌'; el.querySelector('span').textContent = text; if (btn) btn.hidden = ok; };
+  const normServer = (v) => { v = (v || '').trim().replace(/\/+$/, ''); if (v && !/^https?:\/\//.test(v)) v = 'https://' + v; return v; };
 
-  chrome.storage.sync.get(['server', 'label'], ({ server, label }) => { if (server) $('#server').value = server; if (label) $('#label').value = label; });
-  $('#label').addEventListener('change', () => chrome.storage.sync.set({ label: $('#label').value.trim() }));
+  async function refresh() {
+    const st = await JDR.check();
+    $('#server').value = st.settings.server; $('#label').value = st.settings.label; $('#auto').checked = st.settings.auto;
+    const needSetup = !st.serverOk || !st.labelOk;
+    $('#settings').hidden = !needSetup && $('#settings').dataset.open !== '1';
+    setStep('#stTerabox', st.teraboxOk, st.teraboxOk ? '로그인됨 — 쿠키 준비됨' : '로그인되어 있지 않음', $('#openTerabox'));
+    setStep('#stJdr', st.jdrOk, st.jdrOk ? '로그인됨' : (st.serverOk ? '로그인되어 있지 않음' : '설정에서 주소를 먼저 저장하세요'), $('#openJdr'));
+    $('#openJdr').hidden = st.jdrOk || !st.serverOk;
+    $('#send').disabled = !(st.teraboxOk && st.jdrOk && !needSetup);
+    if (needSetup) status('⚙ 아래 설정에서 JD Remote 주소와 TeraBox 이메일을 저장하세요', 'muted');
+    else if ($('#send').disabled) status('');
+    return st;
+  }
 
-  const normServer = () => { let v = $('#server').value.trim().replace(/\/+$/, ''); if (v && !/^https?:\/\//.test(v)) v = 'https://' + v; return v; };
+  $('#gear').addEventListener('click', () => { const s = $('#settings'); s.dataset.open = s.hidden ? '1' : '0'; s.hidden = !s.hidden; });
+  $('#openTerabox').addEventListener('click', () => chrome.tabs.create({ url: 'https://www.terabox.com/' }));
+  $('#openJdr').addEventListener('click', async () => { const s = await JDR.getSettings(); chrome.tabs.create({ url: s.server + '/' }); });
 
   $('#save').addEventListener('click', async () => {
-    const server = normServer(); if (!server) return status('주소를 입력하세요', 'bad');
-    const origin = new URL(server).origin + '/*';
-    const granted = await chrome.permissions.request({ origins: [origin] });
-    if (!granted) return status('권한이 거부되었습니다', 'bad');
-    await chrome.storage.sync.set({ server }); $('#server').value = server; status('저장됨: ' + server, 'ok');
+    const server = normServer($('#server').value); const label = $('#label').value.trim();
+    if (!/^https:\/\/.+/.test(server)) return status('주소는 https:// 로 시작해야 합니다', 'bad');
+    if (!JDR.EMAIL_RE.test(label)) return status('TeraBox 계정 이메일을 입력하세요', 'bad');
+    const granted = await chrome.permissions.request({ origins: [new URL(server).origin + '/*'] });
+    if (!granted) return status('JD Remote 주소 접근 권한이 거부되었습니다', 'bad');
+    await JDR.setSettings({ server, label, auto: $('#auto').checked });
+    $('#settings').dataset.open = '0'; status('저장됨', 'ok'); refresh();
   });
-
-  // EditThisCookie/Cookie-Editor 와 같은 JSON 배열 형식으로 변환 (JD 가 파싱하는 형식)
-  const toExport = (c) => ({
-    domain: c.domain, expirationDate: c.expirationDate, hostOnly: c.hostOnly, httpOnly: c.httpOnly,
-    name: c.name, path: c.path, sameSite: c.sameSite === 'no_restriction' ? 'no_restriction' : (c.sameSite || 'unspecified'),
-    secure: c.secure, session: c.session, storeId: c.storeId || '0', value: c.value,
-  });
+  $('#auto').addEventListener('change', (e) => JDR.setSettings({ auto: e.target.checked }));
 
   $('#send').addEventListener('click', async () => {
-    const server = normServer(); if (!server) return status('먼저 JD Remote 주소를 저장하세요', 'bad');
-    const label = $('#label').value.trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(label)) return status('TeraBox 계정 이메일을 입력하세요 — JD가 이메일 형식이 아닌 아이디는 거부합니다', 'bad');
-    chrome.storage.sync.set({ label });
-    $('#send').disabled = true; status('쿠키 읽는 중…');
-    try {
-      const all = [];
-      for (const d of TERABOX_DOMAINS) all.push(...await chrome.cookies.getAll({ domain: d }));
-      const seen = new Set(); const cookies = all.filter((c) => { const k = c.domain + '|' + c.path + '|' + c.name; if (seen.has(k)) return false; seen.add(k); return true; }).map(toExport);
-      if (!cookies.some((c) => ['ndus', 'BDUSS', 'STOKEN'].includes(c.name))) throw new Error('terabox 로그인 쿠키(ndus)가 없습니다. 이 브라우저에서 terabox.com에 먼저 로그인하세요.');
-      // JD Remote 세션: 쿠키를 읽어 헤더로 전달 (확장→서버 요청은 SameSite 때문에 쿠키가 안 붙을 수 있음)
-      const sess = await chrome.cookies.get({ url: server + '/', name: 'jdr_session' });
-      if (!sess) throw new Error('JD Remote에 로그인되어 있지 않습니다. ' + server + ' 에 먼저 로그인하세요.');
-      status(`쿠키 ${cookies.length}개 전송 중…`);
-      const r = await fetch(server + '/api/accounts/terabox/cookies', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-JDR-Session': sess.value },
-        body: JSON.stringify({ cookies, username: label }),
-      });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error((j.detail && j.detail.reason) || j.detail || (r.status + ' ' + r.statusText));
-      const a = j.account || {};
-      status(`${j.action === 'added' ? '계정 추가' : '쿠키 갱신'} 완료 ✓\n${a.hostname || 'terabox.com'} · ${a.username || ''}\n상태: ${a.valid === false || a.error ? '오류 — ' + (a.error || 'invalid') : '정상'}${j.locked ? '\n(JD Remote 잠금이 아직 안 풀렸습니다. 몇 초 후 다시 확인)' : '\nJD Remote 잠금 해제됨'}`, a.valid === false ? 'bad' : 'ok');
-    } catch (e) { status('실패: ' + e.message, 'bad'); }
+    $('#send').disabled = true; status('전송 중…');
+    try { const r = JDR.summarize(await JDR.send()); status((r.ok ? '✓ ' : '⚠ ') + r.text, r.ok ? 'ok' : 'bad'); }
+    catch (e) { status('실패: ' + e.message, 'bad'); }
     finally { $('#send').disabled = false; }
   });
+
+  refresh();
+  // 팝업이 열린 동안 다른 탭에서 로그인하면 상태 갱신
+  chrome.cookies.onChanged.addListener(() => { clearTimeout(refresh._t); refresh._t = setTimeout(refresh, 800); });
 })();

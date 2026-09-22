@@ -252,7 +252,7 @@
   function openAcctSheet(a) {
     if (!a) return;
     $('#acctSheetTitle').textContent = a.hostname; $('#acctSheetInfo').textContent = `${a.username || ''} · 만료 ${fmtDate(a.validUntil)}${a.error ? ' · ' + a.error : ''}`;
-    $('#acctEditUser').value = a.username || ''; $('#acctEditPass').value = ''; $('#acctEditCookie').value = ''; setCookieMode(isCookieHoster(a.hostname), 'acctEdit');
+    $('#acctEditUser').value = a.username || ''; $('#acctEditPass').value = ''; $('#acctEditCookie').value = ''; setCookieMode(isCookieHoster(a.hostname), 'acctEdit', isCookieHoster(a.hostname));
     const A = [
       [a.enabled ? '⏸ 사용 안 함' : '▶ 사용', () => api(`/accounts/${a.uuid}/${a.enabled ? 'disable' : 'enable'}`, { method: 'POST' })],
       ['↻ 상태 갱신', () => api(`/accounts/${a.uuid}/refresh`, { method: 'POST' })],
@@ -266,10 +266,16 @@
   // 쿠키 로그인 호스터(비밀번호 자리에 브라우저 쿠키를 넣는 JD 플러그인들) — 도메인 입력 시 자동으로 쿠키 모드
   const COOKIE_HOSTERS = ['terabox', '1024tera', 'nephobox', 'mirrobox', 'momerybox', 'teraboxapp', '4funbox', 'freeterabox'];
   const isCookieHoster = (h) => COOKIE_HOSTERS.some((k) => (h || '').toLowerCase().includes(k));
-  const setCookieMode = (on, prefix) => { $(`#${prefix}PassField`).hidden = on; $(`#${prefix}CookieField`).hidden = !on; $(`#${prefix}CookieMode`).checked = on; };
+  // forced=true: 쿠키 전용 호스터 — 비밀번호 로그인은 JD 플러그인이 지원하지 않으므로 선택지 자체를 잠근다
+  const setCookieMode = (on, prefix, forced = false) => {
+    $(`#${prefix}PassField`).hidden = on; $(`#${prefix}CookieField`).hidden = !on;
+    const cb = $(`#${prefix}CookieMode`); cb.checked = on; cb.disabled = forced;
+    const note = $(`#${prefix}CookieNote`); if (note) note.hidden = !forced;
+  };
   $('#acctCookieMode').addEventListener('change', (e) => setCookieMode(e.target.checked, 'acct'));
   $('#acctEditCookieMode').addEventListener('change', (e) => setCookieMode(e.target.checked, 'acctEdit'));
-  $('#acctHost').addEventListener('change', (e) => { if (isCookieHoster(e.target.value)) setCookieMode(true, 'acct'); });
+  const onHostInput = (e) => { const f = isCookieHoster(e.target.value); if (f) setCookieMode(true, 'acct', true); else if ($('#acctCookieMode').disabled) setCookieMode(false, 'acct', false); };
+  $('#acctHost').addEventListener('input', onHostInput); $('#acctHost').addEventListener('change', onHostInput);
   $('#acctForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const cookieMode = $('#acctCookieMode').checked;
@@ -277,7 +283,7 @@
     const body = { hostname: $('#acctHost').value.trim(), username: $('#acctUser').value.trim(), password: secret };
     if (!body.hostname || !body.username || !body.password) return toast(cookieMode ? '호스터·아이디·쿠키를 모두 입력하세요' : '호스터·아이디·비밀번호를 모두 입력하세요', true);
     const r = await act('계정 추가', () => api('/accounts', { method: 'POST', body }));
-    if (r) { $('#acctHost').value = ''; $('#acctUser').value = ''; $('#acctPass').value = ''; $('#acctCookie').value = ''; setCookieMode(false, 'acct'); setTimeout(loadAccounts, 1500); }
+    if (r) { $('#acctHost').value = ''; $('#acctUser').value = ''; $('#acctPass').value = ''; $('#acctCookie').value = ''; setCookieMode(false, 'acct', false); setTimeout(loadAccounts, 1500); toast('JD가 계정을 확인하는 중 — 잠시 후 상태를 확인하세요'); }
   });
   $('#btnAcctRefreshAll').addEventListener('click', async () => { for (const a of accounts) { try { await api(`/accounts/${a.uuid}/refresh`, { method: 'POST' }); } catch (e) {} } toast('갱신 요청'); setTimeout(loadAccounts, 2000); });
 

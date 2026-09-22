@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 
 from .auth import require_api_auth
 from .jd_client import JDClient, JDError, JDUnavailable
+from .lock import LockState, is_terabox
 
 router = APIRouter(prefix="/api", dependencies=[Depends(require_api_auth)])
 
@@ -124,10 +125,14 @@ async def state(request: Request) -> dict[str, Any]:
     jd = _jd(request)
     s = _settings(request)
     try:
-        st, pkgs, glinks, gpkgs, collecting, limit, caps = await asyncio.gather(
+        st, pkgs, glinks, gpkgs, collecting, limit, caps, accts = await asyncio.gather(
             jd.state(), jd.packages(), jd.grabber_links(), jd.grabber_packages(),
-            jd.grabber_collecting(), jd.speed_limit(), jd.captchas(),
+            jd.grabber_collecting(), jd.speed_limit(), jd.captchas(), jd.accounts(),
         )
+        lock: LockState = request.app.state.lock
+        lock.update_from_accounts(accts)
+        if lock.locked:
+            raise HTTPException(423, {"locked": True, "reason": lock.reason})
     except JDUnavailable as e:
         return {"ts": time.time(), "jd": {"connected": False, "error": str(e),
                 "hint": "docker network connect jdnet jdownloader2"}, "packages": [], "linkgrabber": None}
@@ -309,6 +314,49 @@ async def accounts_remove(body: AccountIds, request: Request) -> dict:
     return {"removed": len(body.ids)}
 
 
+class TeraboxCookies(BaseModel):
+    cookies: Any = Field(..., description="브라우저 쿠키 내보내기: JSON 배열(name/value/domain…) 또는 cookies.txt 텍스트")
+    username: str | None = Field(None, description="계정이 없어 새로 만들 때 쓸 라벨")
+
+
+@router.post("/accounts/terabox/cookies")
+async def terabox_cookies(body: TeraboxCookies, request: Request) -> dict:
+    """크롬 확장이 호출. 기존 TeraBox 계정이 있으면 쿠키만 교체(updateAccount), 없으면 새로 추가.
+    잠금 상태에서도 허용되는 유일한 API. 쿠키는 JD로 전달만 하고 저장/로그하지 않는다."""
+    import json as _json
+    jd = _jd(request)
+    cookie_str = body.cookies if isinstance(body.cookies, str) else _json.dumps(body.cookies, ensure_ascii=False)
+    if not cookie_str.strip():
+        raise HTTPException(400, "쿠키가 비어 있습니다.")
+    if isinstance(body.cookies, list) and not any(str(c.get("name", "")).lower() in ("ndus", "bduss", "stoken") for c in body.cookies if isinstance(c, dict)):
+        raise HTTPException(400, "TeraBox 로그인 쿠키(ndus/BDUSS)가 없습니다. terabox.com에 로그인된 상태에서 다시 시도하세요.")
+    accts = await _guard(jd.accounts())
+    tb = [a for a in accts if is_terabox(a.get("hostname"))]
+    if tb:
+        a = tb[0]
+        await _guard(jd.update_account(a["uuid"], a.get("username") or a.get("userName") or body.username or "terabox", cookie_str))
+        action = "updated"
+        uuid = a["uuid"]
+    else:
+        await _guard(jd.add_account("terabox.com", body.username or "terabox", cookie_str))
+        action = "added"
+        uuid = None
+    # JD가 재검증할 시간을 주고 잠금 재평가
+    await asyncio.sleep(2.5)
+    if uuid:
+        try:
+            await jd.refresh_accounts([uuid])
+            await asyncio.sleep(2.0)
+        except (JDError, JDUnavailable):
+            pass
+    accts = await _guard(jd.accounts())
+    lock: LockState = request.app.state.lock
+    lock.update_from_accounts(accts)
+    acct = next((a for a in accts if is_terabox(a.get("hostname"))), None)
+    return {"action": action, "locked": lock.locked, "account": _acct_view(acct) if acct else None}
+
+
+# 주의: 위 정적 경로가 아래 /{uuid}/{action} 보다 먼저 등록되어야 한다.
 @router.post("/accounts/{uuid}/{action}")
 async def accounts_toggle(uuid: int, action: str, request: Request) -> dict:
     jd = _jd(request)

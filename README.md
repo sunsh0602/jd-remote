@@ -14,6 +14,11 @@ JD 로컬 RemoteAPI(3128)를 호출한다. Transmission Remote처럼 **링크 �
 - 상단: 전역 시작/일시정지, 속도 제한 토글(프리셋), 완료 정리, 60초 속도 스파크라인, **캡차 대기 배너**(noVNC 바로가기), JD 연결 끊김 안내
 - 로그인은 **JD 컨테이너의 기존 계정(noVNC용 webauth)에 위임** — jd-remote는 비밀번호를 저장·관리하지 않음. 세션 30일 유지, 실패 지연·분당 5회 제한
 
+## TeraBox 쿠키 만료 → 잠금 → 확장으로 갱신
+- JD의 TeraBox 계정(`accountsV2`)이 `valid=false` 또는 `error`면 jd-remote는 **잠금**: 모든 `/api/*`는 423, 화면은 로그인 페이지에 "TeraBox 쿠키가 만료되어 로그아웃되었습니다" 안내(로그인 폼 숨김). 세션 쿠키 자체는 유지해서 확장이 갱신 API를 인증할 수 있게 한다.
+- 갱신: `extension/`의 크롬 확장(**JD Remote 쿠키 도우미**) — terabox.com 로그인 후 아이콘 클릭 → 쿠키를 `POST /api/accounts/terabox/cookies`로 전송(`X-JDR-Session` 헤더 인증) → JD `updateAccount` → 잠금 자동 해제, 로그인 화면이 5초 폴링(`/api/lock`)으로 앱에 복귀. 설치/사용법은 [extension/README.md](extension/README.md).
+- 잠금 중에도 `/api/accounts/terabox/cookies`와 공개 `/api/lock`만 동작한다.
+
 ## 구성
 ```
 폰 ─https─▶ DSM 리버스 프록시(jdr.<your-domain>:443) ─▶ http://127.0.0.1:5810 (이 앱)

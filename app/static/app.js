@@ -31,6 +31,7 @@
   async function api(path, opts = {}) {
     const r = await fetch('/api' + path, { headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', ...opts, body: opts.body ? JSON.stringify(opts.body) : undefined });
     if (r.status === 401) { location.href = '/login?next=' + encodeURIComponent(location.pathname + location.search); throw new Error('401'); }
+    if (r.status === 423) { location.href = '/login?locked=1'; throw new Error('401'); } // TeraBox 쿠키 만료 → 잠금(로그아웃 화면)
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(j.detail || r.statusText);
     return j;

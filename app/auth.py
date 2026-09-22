@@ -20,6 +20,7 @@ from fastapi.responses import RedirectResponse
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
 COOKIE = "jdr_session"
+SESSION_HEADER = "x-jdr-session"   # 크롬 확장이 쿠키 대신 헤더로 세션 토큰을 보냄 (SameSite 우회)
 
 
 class Auth:
@@ -84,8 +85,11 @@ class Auth:
         except (BadSignature, SignatureExpired):
             return None
 
+    def session_token(self, request: Request) -> str | None:
+        return request.headers.get(SESSION_HEADER) or request.cookies.get(COOKIE)
+
     def is_authed(self, request: Request) -> bool:
-        return self.verify(request.cookies.get(COOKIE)) is not None
+        return self.verify(self.session_token(request)) is not None
 
 
 def client_ip(request: Request) -> str:
@@ -102,15 +106,21 @@ def set_session_cookie(resp, token: str, max_age: int, secure: bool) -> None:
 
 
 def require_api_auth(request: Request) -> None:
-    """/api/* 용 — 미인증이면 401 JSON."""
+    """/api/* 용 — 미인증이면 401 JSON. TeraBox 쿠키 만료로 잠긴 상태면 쿠키 갱신 엔드포인트만 통과."""
     auth: Auth = request.app.state.auth
     if not auth.is_authed(request):
         raise HTTPException(401, "로그인이 필요합니다.")
+    lock = getattr(request.app.state, "lock", None)
+    if lock and lock.locked and not request.url.path.startswith("/api/accounts/terabox/cookies"):
+        raise HTTPException(423, {"locked": True, "reason": lock.reason})
 
 
 def page_redirect_if_anon(request: Request) -> RedirectResponse | None:
     auth: Auth = request.app.state.auth
+    lock = getattr(request.app.state, "lock", None)
     if auth.is_authed(request):
+        if lock and lock.locked:
+            return RedirectResponse("/login?locked=1", status_code=302)
         return None
     nxt = request.url.path
     if request.url.query:

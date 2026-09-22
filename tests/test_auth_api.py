@@ -62,6 +62,7 @@ def test_state_maps_unavailable_to_disconnected(monkeypatch):
 
     class Dead:
         async def state(self): raise JDUnavailable("no route")
+        async def accounts(self): raise JDUnavailable("no route")
         async def aclose(self): pass
 
     with TestClient(app) as c:
@@ -75,7 +76,7 @@ def test_state_maps_unavailable_to_disconnected(monkeypatch):
         assert r.status_code == 303 and "jdr_session" in r.headers.get("set-cookie", "")
         # 인증 후 /api/state 는 연결 끊김 정보를 200 으로
         # (Dead 는 state 만 구현 — gather 가 state 에서 먼저 실패하므로 충분)
-        for name in ("packages", "grabber_links", "grabber_packages", "grabber_collecting", "speed_limit", "captchas"):
+        for name in ("packages", "grabber_links", "grabber_packages", "grabber_collecting", "speed_limit", "captchas", "accounts"):
             async def _f(*a, _n=name, **k): raise JDUnavailable("no route")
             setattr(Dead, name, _f)
         r = c.get("/api/state")

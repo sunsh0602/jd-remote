@@ -13,6 +13,8 @@ from . import config
 from .api import extract_urls, router as api_router
 from .auth import COOKIE, Auth, client_ip, page_redirect_if_anon, set_session_cookie
 from .jd_client import JDClient, JDError, JDUnavailable
+from .lock import LockState
+from fastapi.middleware.cors import CORSMiddleware
 
 STATIC = Path(__file__).parent / "static"
 
@@ -23,6 +25,7 @@ async def lifespan(app: FastAPI):
     app.state.settings = s
     app.state.auth = Auth(s.jd_web_url, s.secret, s.cookie_days)
     app.state.jd = JDClient(s.jd_api_url, timeout=s.jd_timeout_s)
+    app.state.lock = LockState()
     yield
     await app.state.jd.aclose()
     await app.state.auth.aclose()
@@ -30,6 +33,9 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="jd-remote", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
 app.include_router(api_router)
+# 크롬 확장(chrome-extension://…)이 쿠키 전송 API를 호출할 수 있게 허용. 인증은 X-JDR-Session 헤더로.
+app.add_middleware(CORSMiddleware, allow_origin_regex=r"^(chrome|moz|edge)-extension://.*$", allow_credentials=True,
+                   allow_methods=["GET", "POST", "OPTIONS"], allow_headers=["Content-Type", "X-JDR-Session"])
 app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
 
@@ -64,8 +70,9 @@ LOGIN_HTML = """<!doctype html><html lang="ko"><head><meta charset="utf-8">
 <body class="login"><main class="login-card">
 <img src="/static/icons/icon-192.png" alt="" width="64" height="64">
 <h1>JD Remote</h1>
+{locked}
 {error}
-<form method="post" action="/login" autocomplete="on">
+<form method="post" action="/login" autocomplete="on" {formhidden}>
 <input type="hidden" name="next" value="{next}">
 <label>아이디<input name="username" type="text" autocomplete="username" autocapitalize="off" autofocus required></label>
 <label>비밀번호<input name="password" type="password" autocomplete="current-password" required></label>
@@ -73,17 +80,41 @@ LOGIN_HTML = """<!doctype html><html lang="ko"><head><meta charset="utf-8">
 </form><p class="muted">JD 화면(noVNC)과 같은 계정입니다. 30일 동안 로그인이 유지됩니다.</p></main></body></html>"""
 
 
+LOCKED_HTML = """<div class="banner bad" style="flex-direction:column;align-items:stretch;text-align:left;gap:8px">
+<b>TeraBox 쿠키가 만료되어 로그아웃되었습니다.</b>
+<span class="small">{reason}</span>
+<span class="small">PC 크롬(또는 안드로이드 Kiwi/Edge)에서 <a href="https://www.terabox.com/" target="_blank" rel="noopener">terabox.com</a>에 로그인한 뒤,
+<b>JD Remote 쿠키 도우미</b> 확장 아이콘을 누르세요. 갱신되면 이 화면이 자동으로 풀립니다.</span>
+<span class="small muted" id="lockPoll">상태 확인 중…</span></div>
+<script>(function(){{var t=setInterval(function(){{fetch('/api/lock',{{credentials:'same-origin'}}).then(function(r){{return r.json()}}).then(function(j){{if(!j.locked){{clearInterval(t);location.replace('/')}}else{{document.getElementById('lockPoll').textContent='아직 만료 상태 · '+new Date().toLocaleTimeString()}}}}).catch(function(){{}})}},5000)}})()</script>"""
+
+
+@app.get("/api/lock", include_in_schema=False)
+async def lock_status(request: Request):
+    """공개(미인증 가능): 잠금 여부만. 로그인 화면이 폴링해 자동 복귀에 쓴다."""
+    lock: LockState = await request.app.state.lock.refresh(request.app.state.jd)
+    return {"locked": lock.locked, "reason": lock.reason if lock.locked else None}
+
+
 @app.get("/login", include_in_schema=False)
-async def login_form(request: Request, next: str = "/", error: str = ""):
+async def login_form(request: Request, next: str = "/", error: str = "", locked: str = ""):
+    lock: LockState = await request.app.state.lock.refresh(request.app.state.jd)
+    if lock.locked:
+        return HTMLResponse(LOGIN_HTML.format(locked=LOCKED_HTML.format(reason=html.escape(lock.reason or "")), error="",
+                                              formhidden="hidden", next="/"))
     if request.app.state.auth.is_authed(request):
         return RedirectResponse(next if next.startswith("/") else "/", status_code=302)
     err = f'<p class="error">{html.escape(error)}</p>' if error else ""
-    return HTMLResponse(LOGIN_HTML.format(error=err, next=html.escape(next if next.startswith("/") else "/")))
+    return HTMLResponse(LOGIN_HTML.format(locked="", error=err, formhidden="",
+                                          next=html.escape(next if next.startswith("/") else "/")))
 
 
 @app.post("/login", include_in_schema=False)
 async def login_submit(request: Request, username: str = Form(...), password: str = Form(...), next: str = Form("/")):
     auth: Auth = request.app.state.auth
+    lock: LockState = await request.app.state.lock.refresh(request.app.state.jd)
+    if lock.locked:
+        return RedirectResponse("/login?locked=1", status_code=303)
     try:
         token = await auth.login(client_ip(request), username, password)
     except Exception as e:  # HTTPException

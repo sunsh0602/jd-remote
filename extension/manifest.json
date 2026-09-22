@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "JD Remote 쿠키 도우미",
+  "version": "1.0.0",
+  "description": "terabox.com 로그인 쿠키를 읽어 내 JD Remote 서버로 전송해 JDownloader 계정을 갱신합니다.",
+  "permissions": ["cookies", "storage"],
+  "host_permissions": [
+    "https://*.terabox.com/*",
+    "https://*.1024terabox.com/*",
+    "https://*.terabox.app/*",
+    "https://*.teraboxapp.com/*"
+  ],
+  "optional_host_permissions": ["https://*/*"],
+  "action": { "default_popup": "popup.html", "default_title": "JD Remote 쿠키 도우미" },
+  "icons": { "48": "icons/icon-48.png", "128": "icons/icon-128.png" }
+}

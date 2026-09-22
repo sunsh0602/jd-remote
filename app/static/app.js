@@ -232,7 +232,7 @@
   }
 
   // ── 계정 탭 ───────────────────────────────────────────────────────────
-  let accounts = []; let hostersLoaded = false;
+  let accounts = [];
   const fmtDate = (ms) => (ms && ms > 0) ? new Date(ms).toLocaleDateString('ko-KR') : (ms === -1 ? '무기한' : '—');
   async function loadAccounts() {
     try { accounts = await api('/accounts'); } catch (e) { $('#acctList').innerHTML = `<li class="muted small">불러오기 실패: ${esc(e.message)}</li>`; return; }
@@ -247,7 +247,6 @@
         <div class="meta"><span>만료 <b>${fmtDate(a.validUntil)}</b></span>${traffic ? `<span>${traffic}</span>` : ''}</div></li>`;
     }).join('');
     $$('#acctList .card').forEach((c) => c.addEventListener('click', () => openAcctSheet(accounts.find((a) => a.uuid === +c.dataset.acct))));
-    if (!hostersLoaded) { hostersLoaded = true; api('/accounts/hosters').then((h) => { $('#hosterList').innerHTML = h.map((x) => `<option value="${esc(x)}">`).join(''); }).catch(() => {}); }
   }
   function openAcctSheet(a) {
     if (!a) return;
@@ -275,7 +274,8 @@
   $('#acctCookieMode').addEventListener('change', (e) => setCookieMode(e.target.checked, 'acct'));
   $('#acctEditCookieMode').addEventListener('change', (e) => setCookieMode(e.target.checked, 'acctEdit'));
   const onHostInput = (e) => { const f = isCookieHoster(e.target.value); if (f) setCookieMode(true, 'acct', true); else if ($('#acctCookieMode').disabled) setCookieMode(false, 'acct', false); };
-  $('#acctHost').addEventListener('input', onHostInput); $('#acctHost').addEventListener('change', onHostInput);
+  $('#acctHost').addEventListener('change', onHostInput);
+  onHostInput({ target: $('#acctHost') }); // 초기 선택(terabox)에 맞춰 쿠키 모드 잠금
   $('#acctForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const cookieMode = $('#acctCookieMode').checked;
@@ -283,7 +283,7 @@
     const body = { hostname: $('#acctHost').value.trim(), username: $('#acctUser').value.trim(), password: secret };
     if (!body.hostname || !body.username || !body.password) return toast(cookieMode ? '호스터·아이디·쿠키를 모두 입력하세요' : '호스터·아이디·비밀번호를 모두 입력하세요', true);
     const r = await act('계정 추가', () => api('/accounts', { method: 'POST', body }));
-    if (r) { $('#acctHost').value = ''; $('#acctUser').value = ''; $('#acctPass').value = ''; $('#acctCookie').value = ''; setCookieMode(false, 'acct', false); setTimeout(loadAccounts, 1500); toast('JD가 계정을 확인하는 중 — 잠시 후 상태를 확인하세요'); }
+    if (r) { $('#acctUser').value = ''; $('#acctPass').value = ''; $('#acctCookie').value = ''; onHostInput({ target: $('#acctHost') }); setTimeout(loadAccounts, 1500); toast('JD가 계정을 확인하는 중 — 잠시 후 상태를 확인하세요'); }
   });
   $('#btnAcctRefreshAll').addEventListener('click', async () => { for (const a of accounts) { try { await api(`/accounts/${a.uuid}/refresh`, { method: 'POST' }); } catch (e) {} } toast('갱신 요청'); setTimeout(loadAccounts, 2000); });
 

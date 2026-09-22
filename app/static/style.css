@@ -63,6 +63,7 @@ a{color:var(--accent)}
 .add-form{display:flex;flex-direction:column;gap:14px;padding-top:6px}
 .field{display:flex;flex-direction:column;gap:6px}
 .field>span{font-size:13px;color:var(--muted)}
+.field select{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;min-height:var(--tap);width:100%;appearance:auto}
 .field input,.field textarea{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;min-height:var(--tap);width:100%}
 .field textarea{min-height:120px;resize:vertical}
 .check{display:flex;align-items:center;gap:10px;min-height:var(--tap)}

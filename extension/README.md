@@ -25,7 +25,7 @@ terabox.com 로그인 쿠키를 읽어 JD Remote 서버(`/api/accounts/terabox/c
 | host: `*.terabox.com` 등 4개 | 그 도메인 쿠키에 접근하기 위해 |
 | optional host: `https://*/*` | 설치 시엔 아무 것도 부여되지 않고, 설정에서 저장한 JD Remote 주소 **하나만** 런타임에 요청 |
 
-크롬 "사이트 설정" 화면에 보이는 위치·카메라·마이크 등은 모든 출처에 공통으로 표시되는 기본 항목(요청 = 미부여)이며 이 확장이 요구하는 것이 아니다.
+크롬 "사이트 설정" 화면에 보이는 위치·카메라·마이크 등은 모든 출처에 공통으로 표시되는 기본 항목(요청 = 미부여)이며 이 확장이 요구하는 것이 아니다. 원칙대로 닫아두려면 브라우저별로 `확장 세부정보 → 사이트 설정`에서 알림·자바스크립트·이미지를 제외한 항목을 **차단**으로 바꾼다(매니페스트로는 설정 불가). 코드 쪽 잠금은 `content_security_policy.extension_pages`로 자기 파일 스크립트만 허용, 외부 연결은 https만, object/frame 금지.
 
 ## 동작/보안
 - 읽는 쿠키: `terabox.com`/`1024terabox.com`/`terabox.app`/`teraboxapp.com` 만. 전송 대상: 설정한 JD Remote 서버만. 확장이 저장하는 것: 서버 주소·이메일·자동전송 여부(`chrome.storage.sync`).

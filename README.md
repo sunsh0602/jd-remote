@@ -16,7 +16,7 @@ JD 로컬 RemoteAPI(3128)를 호출한다. Transmission Remote처럼 **링크 �
 
 ## TeraBox 쿠키 만료 → 잠금 → 확장으로 갱신
 - JD의 TeraBox 계정(`accountsV2`)이 `valid=false` 또는 `error`면 jd-remote는 **잠금**: 모든 `/api/*`는 423, 화면은 로그인 페이지에 "TeraBox 쿠키가 만료되어 로그아웃되었습니다" 안내(로그인 폼 숨김). 세션 쿠키 자체는 유지해서 확장이 갱신 API를 인증할 수 있게 한다.
-- 갱신: `extension/`의 크롬 확장(**JD Remote 쿠키 도우미**) — terabox.com 로그인 후 아이콘 클릭 → 쿠키를 `POST /api/accounts/terabox/cookies`로 전송(`X-JDR-Session` 헤더 인증) → JD `updateAccount` → 잠금 자동 해제, 로그인 화면이 5초 폴링(`/api/lock`)으로 앱에 복귀. 설치/사용법은 [extension/README.md](extension/README.md).
+- 갱신: `extension/`의 크롬 확장(**JD Remote 쿠키 도우미**) — terabox.com 로그인 후 아이콘 클릭 → 쿠키를 `POST /api/accounts/terabox/cookies`로 전송(`X-JDR-Session` 헤더 인증) → JD `setUserNameAndPassword` → 잠금 자동 해제, 로그인 화면이 5초 폴링(`/api/lock`)으로 앱에 복귀. 설치/사용법은 [extension/README.md](extension/README.md).
 - 잠금 중에도 `/api/accounts/terabox/cookies`와 공개 `/api/lock`만 동작한다.
 
 ## 구성
@@ -66,4 +66,4 @@ jlesage webauth: `POST /login/login` form `username`/`password`, 요청에 쿠�
 - **POST `/<ns>/<method>` body `{"params":[…]}`만 동작.** GET `?params=`는 INTERNAL_SERVER_ERROR/BAD_PARAMETERS.
 - 성공 `{"data":…}`, 실패 `{"src":"DEVICE","type":"…"}`.
 - `downloadcontroller/getSpeedInBytes` 없음 → 패키지 `speed` 합산.
-- 쓰는 메서드: `downloadcontroller/{getCurrentState,start,stop,pause}`, `downloadsV2/{queryPackages,queryLinks,removeLinks,cleanup,setEnabled,resetLinks,forceDownload}`, `linkgrabberv2/{addLinks,queryLinks,queryPackages,isCollecting,moveToDownloadlist,removeLinks}`, `config/{get,set}`(GeneralSettings.DownloadSpeedLimit*), `captcha/list`, `accountsV2/{listAccounts,listPremiumHoster,addAccount,updateAccount,enableAccounts,disableAccounts,refreshAccounts,removeAccounts}`.
+- 쓰는 메서드: `downloadcontroller/{getCurrentState,start,stop,pause}`, `downloadsV2/{queryPackages,queryLinks,removeLinks,cleanup,setEnabled,resetLinks,forceDownload}`, `linkgrabberv2/{addLinks,queryLinks,queryPackages,isCollecting,moveToDownloadlist,removeLinks}`, `config/{get,set}`(GeneralSettings.DownloadSpeedLimit*), `captcha/list`, `accountsV2/{listAccounts,listPremiumHoster,addAccount,setUserNameAndPassword,enableAccounts,disableAccounts,refreshAccounts,removeAccounts}`.

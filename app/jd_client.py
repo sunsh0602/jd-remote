@@ -155,7 +155,8 @@ class JDClient:
         return await self.call("accountsV2/addAccount", hostname, username, password)
 
     async def update_account(self, account_id: int, username: str, password: str) -> Any:
-        return await self.call("accountsV2/updateAccount", account_id, username, password)
+        # MyJD API 정식 이름. updateAccount 는 존재하지 않음(API_COMMAND_NOT_FOUND)
+        return await self.call("accountsV2/setUserNameAndPassword", account_id, username, password)
 
     async def remove_accounts(self, ids: list[int]) -> Any:
         return await self.call("accountsV2/removeAccounts", ids)

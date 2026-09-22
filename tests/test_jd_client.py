@@ -101,6 +101,6 @@ async def test_account_calls():
     await jd.set_accounts_enabled(False, [42])
     await jd.remove_accounts([42])
     assert calls[0] == ("/accountsV2/addAccount", ["terabox.com", "me@x.io", "s3cret"])
-    assert calls[1] == ("/accountsV2/updateAccount", [42, "me@x.io", "n3w"])
+    assert calls[1] == ("/accountsV2/setUserNameAndPassword", [42, "me@x.io", "n3w"])
     assert calls[2] == ("/accountsV2/disableAccounts", [[42]])
     assert calls[3] == ("/accountsV2/removeAccounts", [[42]])

@@ -87,3 +87,35 @@ def test_state_maps_unavailable_to_disconnected(monkeypatch):
         # share → 추가 탭 프리필 리다이렉트
         r = c.get("/share?text=%EB%B4%90%20https://x.example/a%20end", follow_redirects=False)
         assert r.status_code == 303 and r.headers["location"].startswith("/?add=https%3A//x.example/a")
+
+
+# ── 저장 위치 정규화 (_dest_path) ────────────────────────────────────────
+class _S:
+    jd_output_prefix = "/output"
+    download_root = "/volume1/homes/sunsh/Downloads"
+
+
+def test_dest_path_default_folder():
+    from app.api import _dest_path
+    assert _dest_path(None, _S) is None
+    assert _dest_path("", _S) is None
+    assert _dest_path("  ", _S) is None
+    # 화면에 보이는 다운로드 폴더 그대로 = 기본 폴더
+    assert _dest_path("/volume1/homes/sunsh/Downloads", _S) is None
+    assert _dest_path("/volume1/homes/sunsh/Downloads/", _S) is None
+    assert _dest_path("/output", _S) is None
+
+
+def test_dest_path_subfolder():
+    from app.api import _dest_path
+    assert _dest_path("영화", _S) == "/output/영화"
+    assert _dest_path("/volume1/homes/sunsh/Downloads/영화", _S) == "/output/영화"
+    assert _dest_path("/volume1/homes/sunsh/Downloads/영화/2026", _S) == "/output/영화/2026"
+    assert _dest_path("/output/영화", _S) == "/output/영화"
+
+
+def test_dest_path_rejects_outside_and_traversal():
+    from app.api import _dest_path
+    for bad in ["/etc", "/volume1/homes/sunsh/Other", "../x", "/volume1/homes/sunsh/Downloads/../x"]:
+        with pytest.raises(HTTPException):
+            _dest_path(bad, _S)

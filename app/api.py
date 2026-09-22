@@ -164,11 +164,36 @@ async def package_links(uuid: int, request: Request) -> list[dict]:
     return [_link_view(l) for l in links]
 
 
+def _dest_path(raw: str | None, s) -> str | None:
+    """저장 위치 입력을 JD 내부 경로로 바꾼다. 없거나 기본 폴더면 None(=JD 기본 저장 위치).
+
+    화면(설정·추가 탭)에는 호스트 경로(DOWNLOAD_ROOT)가 보이므로 그 전체 경로를 그대로
+    받아도 동작해야 한다. JD 내부 경로(JD_OUTPUT_PREFIX)로 들어와도 같게 처리한다.
+    """
+    if not raw:
+        return None
+    sub = raw.strip()
+    under_root = False
+    for root in (s.download_root, s.jd_output_prefix):
+        root = (root or "").rstrip("/")
+        if root and (sub == root or sub.startswith(root + "/")):
+            sub, under_root = sub[len(root):], True
+            break
+    if sub.startswith("/") and not under_root:
+        raise HTTPException(400, "다운로드 폴더 밖의 경로는 쓸 수 없습니다.")
+    parts = [x for x in sub.strip().strip("/").split("/") if x]
+    if not parts:
+        return None  # 기본 다운로드 폴더
+    if ".." in parts:
+        raise HTTPException(400, "폴더 경로가 올바르지 않습니다.")
+    return f"{s.jd_output_prefix}/{'/'.join(parts)}"
+
+
 # ── 링크 추가 / 링크그래버 ────────────────────────────────────────────────
 class AddLinks(BaseModel):
     text: str = Field(..., description="URL들이 들어 있는 텍스트(줄바꿈/공백 구분, 잡문 섞여도 됨)")
     packageName: str | None = None
-    destFolder: str | None = Field(None, description="JD 기준 하위 폴더 이름(프리셋). /output/<이름>")
+    destFolder: str | None = Field(None, description="저장 위치. 하위 폴더 이름이거나, 화면에 보이는 다운로드 폴더 전체 경로(그 아래 하위 폴더 포함)")
     autostart: bool = False
 
 
@@ -178,12 +203,7 @@ async def add_links(body: AddLinks, request: Request) -> dict:
     if not urls:
         raise HTTPException(400, "URL을 찾지 못했습니다.")
     s = _settings(request)
-    dest = None
-    if body.destFolder:
-        sub = body.destFolder.strip().strip("/")
-        if ".." in sub or not sub:
-            raise HTTPException(400, "폴더 이름이 올바르지 않습니다.")
-        dest = f"{s.jd_output_prefix}/{sub}"
+    dest = _dest_path(body.destFolder, s)
     await _guard(_jd(request).add_links(urls, body.packageName or None, dest, body.autostart))
     return {"added": len(urls), "urls": urls, "autostart": body.autostart}
 

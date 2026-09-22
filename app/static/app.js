@@ -10,7 +10,7 @@
     set(k, v) { try { localStorage.setItem('jdr.' + k, JSON.stringify(v)); } catch (e) {} },
   };
   const state = {
-    data: null, filter: LS.get('filter', 'all'), tab: LS.get('tab', 'downloads'),
+    data: null, filter: LS.get('filter', 'all'), tab: LS.get('tab', 'downloads'), downloadRoot: '',
     pollMs: LS.get('pollMs', 3000),
     clipboard: LS.get('clipboard', true), lastClip: LS.get('lastClip', ''),
     speeds: new Array(60).fill(0), timer: null, inflight: false, expanded: new Set(), openPkg: null,
@@ -82,7 +82,7 @@
     $$('[data-banner]').forEach((el) => el.addEventListener('click', () => b[+el.dataset.banner].a.onclick()));
     $('#linkNovnc').hidden = !jd.novncUrl; if (jd.novncUrl) $('#linkNovnc').href = jd.novncUrl;
     $('#linkDsm').hidden = !jd.dsmUrl; if (jd.dsmUrl) $('#linkDsm').href = jd.dsmUrl;
-    if (jd.downloadRoot) $('#dlRootText').textContent = '다운로드 폴더: ' + jd.downloadRoot;
+    if (jd.downloadRoot) { $('#dlRootText').textContent = '다운로드 폴더: ' + jd.downloadRoot; setDownloadRoot(jd.downloadRoot); }
     if (jd.pollMs && !LS.get('pollMs', null)) state.pollMs = jd.pollMs;
   }
 
@@ -203,13 +203,19 @@
   addText.addEventListener('input', updateCount);
   $('#btnClearText').addEventListener('click', () => { addText.value = ''; updateCount(); });
   $('#btnPaste').addEventListener('click', async () => { try { const t = await navigator.clipboard.readText(); if (!extractUrls(t).length) return toast('클립보드에 URL이 없습니다', true); addText.value = (addText.value ? addText.value + '\n' : '') + t; updateCount(); } catch (e) { toast('클립보드를 읽을 수 없습니다 (권한)', true); } });
+  // 저장 위치: 설정에 보이는 다운로드 폴더를 기본값으로 채운다. 사용자가 고친 값은 건드리지 않는다.
+  function setDownloadRoot(root) {
+    const el = $('#addFolder'), prev = state.downloadRoot;
+    state.downloadRoot = root;
+    if (!el.value || el.value === prev) el.value = root;
+  }
   $('#addAutostart').checked = LS.get('autostart', false);
   $('#addAutostart').addEventListener('change', (e) => LS.set('autostart', e.target.checked));
   $('#addForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const body = { text: addText.value, destFolder: $('#addFolder').value.trim() || null, autostart: $('#addAutostart').checked };
     const r = await act('링크 추가', () => api('/links', { method: 'POST', body }));
-    if (r) { addText.value = ''; updateCount(); showTab(body.autostart ? 'downloads' : 'grabber'); }
+    if (r) { addText.value = ''; $('#addFolder').value = state.downloadRoot; updateCount(); showTab(body.autostart ? 'downloads' : 'grabber'); }
   });
   // share_target / ?add= 진입
   const params = new URLSearchParams(location.search);

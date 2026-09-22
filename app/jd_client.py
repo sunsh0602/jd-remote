@@ -1,0 +1,159 @@
+"""JDownloader2 로컬 RemoteAPI(DeprecatedAPIServer, 기본 3128) 클라이언트.
+
+확인된 규약(2026-09-22, JD build 48637):
+- 모든 호출은 POST /<namespace>/<method>, body {"params": [...]} (GET ?params= 는 실패).
+- 성공: {"data": ...}. 실패: {"src":"DEVICE","type":"API_COMMAND_NOT_FOUND"|"BAD_PARAMETERS"|..., "data": null|str}.
+- downloadcontroller/getSpeedInBytes 는 없음 → 패키지 speed 합으로 계산.
+"""
+from __future__ import annotations
+
+from typing import Any
+
+import httpx
+
+
+class JDError(Exception):
+    """JD가 에러 타입을 돌려준 경우."""
+
+    def __init__(self, kind: str, detail: Any = None):
+        super().__init__(f"{kind}: {detail}")
+        self.kind = kind
+        self.detail = detail
+
+
+class JDUnavailable(Exception):
+    """JD에 연결 자체가 안 되는 경우(컨테이너 다운, jdnet 미연결 등)."""
+
+
+PACKAGE_FIELDS = {
+    "bytesLoaded": True, "bytesTotal": True, "speed": True, "eta": True,
+    "finished": True, "status": True, "running": True, "enabled": True,
+    "childCount": True, "hosts": True, "saveTo": True, "comment": True,
+}
+LINK_FIELDS = {
+    "bytesLoaded": True, "bytesTotal": True, "speed": True, "eta": True,
+    "finished": True, "status": True, "enabled": True, "host": True,
+    "url": True, "packageUUID": True, "running": True, "skipped": True,
+}
+GRABBER_LINK_FIELDS = {
+    "availability": True, "bytesTotal": True, "host": True, "name": True,
+    "url": True, "packageUUID": True, "enabled": True, "comment": True,
+}
+GRABBER_PACKAGE_FIELDS = {
+    "bytesTotal": True, "childCount": True, "hosts": True, "saveTo": True,
+    "enabled": True, "comment": True,
+}
+GENERAL = "org.jdownloader.settings.GeneralSettings"
+
+
+class JDClient:
+    def __init__(self, base_url: str, timeout: float = 10.0, transport: httpx.AsyncBaseTransport | None = None):
+        self._http = httpx.AsyncClient(base_url=base_url, timeout=timeout, transport=transport)
+
+    async def aclose(self) -> None:
+        await self._http.aclose()
+
+    # ── 저수준 ────────────────────────────────────────────────────────────
+    async def call(self, path: str, *params: Any) -> Any:
+        try:
+            r = await self._http.post(f"/{path.lstrip('/')}", json={"params": list(params)})
+        except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout, httpx.RemoteProtocolError) as e:
+            raise JDUnavailable(str(e)) from e
+        try:
+            body = r.json()
+        except ValueError as e:
+            raise JDError("BAD_RESPONSE", r.text[:200]) from e
+        if isinstance(body, dict) and body.get("type") and body.get("src") == "DEVICE":
+            raise JDError(body["type"], body.get("data"))
+        return body.get("data") if isinstance(body, dict) else body
+
+    # ── 컨트롤러 ──────────────────────────────────────────────────────────
+    async def state(self) -> str:
+        return await self.call("downloadcontroller/getCurrentState")
+
+    async def start(self) -> Any:
+        return await self.call("downloadcontroller/start")
+
+    async def stop(self) -> Any:
+        return await self.call("downloadcontroller/stop")
+
+    async def pause(self, paused: bool) -> Any:
+        return await self.call("downloadcontroller/pause", paused)
+
+    # ── 다운로드 목록 ──────────────────────────────────────────────────────
+    async def packages(self, uuids: list[int] | None = None) -> list[dict]:
+        q = dict(PACKAGE_FIELDS)
+        if uuids:
+            q["packageUUIDs"] = uuids
+        return await self.call("downloadsV2/queryPackages", q) or []
+
+    async def links(self, package_uuids: list[int] | None = None) -> list[dict]:
+        q = dict(LINK_FIELDS)
+        if package_uuids:
+            q["packageUUIDs"] = package_uuids
+        return await self.call("downloadsV2/queryLinks", q) or []
+
+    async def remove(self, link_ids: list[int], package_ids: list[int]) -> Any:
+        return await self.call("downloadsV2/removeLinks", link_ids, package_ids)
+
+    async def delete_with_files(self, link_ids: list[int], package_ids: list[int]) -> Any:
+        return await self.call("downloadsV2/cleanup", link_ids, package_ids,
+                               "DELETE_ALL", "REMOVE_LINKS_AND_DELETE_FILES", "SELECTED")
+
+    async def cleanup_finished(self) -> Any:
+        return await self.call("downloadsV2/cleanup", [], [], "DELETE_FINISHED", "REMOVE_LINKS_ONLY", "ALL")
+
+    async def set_enabled(self, enabled: bool, link_ids: list[int], package_ids: list[int]) -> Any:
+        return await self.call("downloadsV2/setEnabled", enabled, link_ids, package_ids)
+
+    async def retry(self, link_ids: list[int], package_ids: list[int]) -> Any:
+        await self.call("downloadsV2/resetLinks", link_ids, package_ids)
+        return await self.call("downloadsV2/forceDownload", link_ids, package_ids)
+
+    # ── 링크그래버 ────────────────────────────────────────────────────────
+    async def add_links(self, links: list[str], package_name: str | None = None,
+                        dest_folder: str | None = None, autostart: bool = False) -> Any:
+        q: dict[str, Any] = {
+            "links": "\n".join(links),
+            "autostart": autostart,
+            "autoExtract": False,
+            "overwritePackagizerRules": False,
+        }
+        if package_name:
+            q["packageName"] = package_name
+        if dest_folder:
+            q["destinationFolder"] = dest_folder
+        return await self.call("linkgrabberv2/addLinks", q)
+
+    async def grabber_collecting(self) -> bool:
+        return bool(await self.call("linkgrabberv2/isCollecting"))
+
+    async def grabber_links(self) -> list[dict]:
+        return await self.call("linkgrabberv2/queryLinks", dict(GRABBER_LINK_FIELDS)) or []
+
+    async def grabber_packages(self) -> list[dict]:
+        return await self.call("linkgrabberv2/queryPackages", dict(GRABBER_PACKAGE_FIELDS)) or []
+
+    async def grabber_move_to_downloads(self, link_ids: list[int], package_ids: list[int]) -> Any:
+        return await self.call("linkgrabberv2/moveToDownloadlist", link_ids, package_ids)
+
+    async def grabber_remove(self, link_ids: list[int], package_ids: list[int]) -> Any:
+        return await self.call("linkgrabberv2/removeLinks", link_ids, package_ids)
+
+    # ── 설정 / 기타 ───────────────────────────────────────────────────────
+    async def speed_limit(self) -> dict:
+        enabled = await self.call("config/get", GENERAL, None, "DownloadSpeedLimitEnabled")
+        limit = await self.call("config/get", GENERAL, None, "DownloadSpeedLimit")
+        return {"enabled": bool(enabled), "limit": int(limit or 0)}
+
+    async def set_speed_limit(self, enabled: bool, limit: int | None = None) -> dict:
+        if limit is not None:
+            await self.call("config/set", GENERAL, None, "DownloadSpeedLimit", int(limit))
+        await self.call("config/set", GENERAL, None, "DownloadSpeedLimitEnabled", bool(enabled))
+        return await self.speed_limit()
+
+    async def captchas(self) -> list:
+        return await self.call("captcha/list") or []
+
+    async def version(self) -> Any:
+        return await self.call("jd/version")

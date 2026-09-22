@@ -1,0 +1,17 @@
+services:
+  jd-remote:
+    build: .
+    image: jd-remote:local
+    container_name: jd-remote
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "127.0.0.1:5810:8000"   # DSM 리버스 프록시만 진입점 (호스트 외부 미노출)
+    networks:
+      - jdnet                   # jdownloader2 컨테이너와 같은 네트워크 → http://jdownloader2:3128
+    logging:
+      driver: json-file
+      options: { max-size: "5m", max-file: "3" }
+networks:
+  jdnet:
+    external: true              # 1회: docker network create jdnet && docker network connect jdnet jdownloader2

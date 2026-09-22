@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1115">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>JD Remote</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/static/icons/icon-192.png">
+<link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="top-row">
+    <div class="brand"><span class="dot" id="connDot"></span><span>JD Remote</span></div>
+    <div class="speed">
+      <canvas id="spark" width="120" height="28" aria-hidden="true"></canvas>
+      <span id="speedText">—</span>
+    </div>
+    <button class="icon-btn" id="settingsBtn" aria-label="설정">⚙</button>
+  </div>
+  <div class="top-row controls">
+    <button class="btn" id="btnToggleRun" data-state="">▶ 시작</button>
+    <button class="btn" id="btnSpeedLimit" title="속도 제한">⚡ <span id="speedLimitText">—</span></button>
+    <button class="btn" id="btnCleanup">🧹 완료 정리</button>
+  </div>
+  <div id="banners"></div>
+</header>
+
+<main id="main">
+  <!-- 다운로드 탭 -->
+  <section id="tab-downloads" class="tab active">
+    <div class="filterbar">
+      <div class="chips" id="filterChips">
+        <button class="chip active" data-f="all">전체</button>
+        <button class="chip" data-f="running">진행중</button>
+        <button class="chip" data-f="finished">완료</button>
+        <button class="chip" data-f="failed">실패</button>
+        <button class="chip" data-f="paused">일시정지</button>
+      </div>
+      <input id="search" class="search" type="search" placeholder="이름 검색" autocomplete="off">
+    </div>
+    <div class="pull-hint" id="pullHint">↓ 당겨서 새로고침</div>
+    <ul class="list" id="pkgList"></ul>
+    <p class="empty" id="pkgEmpty" hidden>다운로드가 없습니다.</p>
+  </section>
+
+  <!-- 수집됨(링크그래버) 탭 -->
+  <section id="tab-grabber" class="tab">
+    <div class="filterbar">
+      <span class="muted" id="grabberInfo">수집된 링크</span>
+      <div class="spacer"></div>
+      <button class="btn small" id="btnClearOffline">오프라인 제거</button>
+      <button class="btn small primary" id="btnStartAll">전체 다운로드 시작</button>
+    </div>
+    <ul class="list" id="grabList"></ul>
+    <p class="empty" id="grabEmpty" hidden>수집된 링크가 없습니다.<br><span class="muted">추가 탭에서 링크를 넣으면 여기서 확인 후 시작할 수 있습니다.</span></p>
+  </section>
+
+  <!-- 추가 탭 -->
+  <section id="tab-add" class="tab">
+    <form id="addForm" class="add-form" autocomplete="off">
+      <label class="field">
+        <span>링크 (여러 개면 줄바꿈)</span>
+        <textarea id="addText" rows="6" placeholder="https://… 를 붙여 넣으세요. 잡문이 섞여 있어도 URL만 골라냅니다."></textarea>
+      </label>
+      <div class="row">
+        <button type="button" class="btn small" id="btnPaste">📋 클립보드 붙여넣기</button>
+        <button type="button" class="btn small" id="btnClearText">지우기</button>
+        <span class="muted" id="urlCount"></span>
+      </div>
+      <label class="field">
+        <span>저장 폴더 (선택)</span>
+        <div class="chips" id="folderChips"></div>
+        <input id="addFolder" type="text" placeholder="하위 폴더 이름 (비우면 기본 폴더)">
+        <span class="muted small">저장 위치: Downloads/<input id="addFolder" type="text" placeholder="하위 폴더 이름 (비우면 기본 폴더)">lt;폴더<input id="addFolder" type="text" placeholder="하위 폴더 이름 (비우면 기본 폴더)">gt;/<input id="addFolder" type="text" placeholder="하위 폴더 이름 (비우면 기본 폴더)">lt;패키지 이름<input id="addFolder" type="text" placeholder="하위 폴더 이름 (비우면 기본 폴더)">gt;/ — 패키지 이름을 비우면 JD가 자동으로 정합니다.</span>
+      </label>
+      <label class="field">
+        <span>패키지 이름 (선택)</span>
+        <input id="addPackage" type="text" placeholder="비우면 JD가 자동으로 정함">
+      </label>
+      <label class="check"><input type="checkbox" id="addAutostart"> 확인 없이 바로 다운로드 시작</label>
+      <button type="submit" class="btn primary wide" id="btnAdd">＋ 링크 추가</button>
+      <p class="muted small">기본은 <b>수집됨</b> 탭에 먼저 올라가고, 온라인/오프라인 확인 후 시작합니다.</p>
+    </form>
+  </section>
+</main>
+
+<nav class="tabbar">
+  <button class="tab-btn active" data-tab="downloads">⬇<span>다운로드</span><em class="badge" id="badgeDl" hidden></em></button>
+  <button class="tab-btn" data-tab="grabber">🧺<span>수집됨</span><em class="badge" id="badgeGrab" hidden></em></button>
+  <button class="tab-btn" data-tab="add">＋<span>추가</span></button>
+</nav>
+
+<!-- 설정 시트 -->
+<div class="sheet" id="settingsSheet" hidden>
+  <div class="sheet-body">
+    <div class="sheet-head"><h2>설정</h2><button class="icon-btn" data-close>✕</button></div>
+    <label class="field"><span>폴더 프리셋 (쉼표로 구분)</span><input id="setPresets" type="text" placeholder="게임, APK, 영상"></label>
+    <label class="field"><span>갱신 주기 (초)</span><input id="setPoll" type="number" min="1" max="60" step="1"></label>
+    <label class="check"><input type="checkbox" id="setClipboard" checked> 앱 열 때 클립보드 URL 감지</label>
+    <div class="row">
+      <a class="btn small" id="linkNovnc" href="#" target="_blank" rel="noopener">🖥 JD 화면(noVNC)</a>
+      <a class="btn small" id="linkDsm" href="#" target="_blank" rel="noopener">🗂 DSM</a>
+    </div>
+    <p class="muted small" id="dlRootText"></p>
+    <form method="post" action="/logout"><button class="btn danger wide" type="submit">로그아웃</button></form>
+  </div>
+</div>
+
+<!-- 속도 제한 시트 -->
+<div class="sheet" id="speedSheet" hidden>
+  <div class="sheet-body">
+    <div class="sheet-head"><h2>속도 제한</h2><button class="icon-btn" data-close>✕</button></div>
+    <label class="check"><input type="checkbox" id="spEnabled"> 속도 제한 사용</label>
+    <label class="field"><span>제한 값 (MB/s)</span><input id="spValue" type="number" min="0.1" step="0.5"></label>
+    <div class="chips" id="spPresets">
+      <button class="chip" data-mb="1">1</button><button class="chip" data-mb="3">3</button>
+      <button class="chip" data-mb="5">5</button><button class="chip" data-mb="10">10</button>
+      <button class="chip" data-mb="30">30</button>
+    </div>
+    <button class="btn primary wide" id="spApply">적용</button>
+  </div>
+</div>
+
+<!-- 패키지 액션 시트 -->
+<div class="sheet" id="pkgSheet" hidden>
+  <div class="sheet-body">
+    <div class="sheet-head"><h2 id="pkgSheetTitle">패키지</h2><button class="icon-btn" data-close>✕</button></div>
+    <p class="muted small" id="pkgSheetPath"></p>
+    <div class="actions" id="pkgSheetActions"></div>
+    <ul class="list sub" id="pkgSheetLinks"></ul>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+<script src="/static/app.js"></script>
+</body>
+</html>

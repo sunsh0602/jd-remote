@@ -48,16 +48,16 @@
     <p class="empty" id="pkgEmpty" hidden>다운로드가 없습니다.</p>
   </section>
 
-  <!-- 수집됨(링크그래버) 탭 -->
+  <!-- 확인 대기(JD 링크그래버) 탭 -->
   <section id="tab-grabber" class="tab">
     <div class="filterbar">
-      <span class="muted" id="grabberInfo">수집된 링크</span>
+      <span class="muted" id="grabberInfo">확인 대기 중인 링크</span>
       <div class="spacer"></div>
       <button class="btn small" id="btnClearOffline">오프라인 제거</button>
       <button class="btn small primary" id="btnStartAll">전체 다운로드 시작</button>
     </div>
     <ul class="list" id="grabList"></ul>
-    <p class="empty" id="grabEmpty" hidden>수집된 링크가 없습니다.<br><span class="muted">추가 탭에서 링크를 넣으면 여기서 확인 후 시작할 수 있습니다.</span></p>
+    <p class="empty" id="grabEmpty" hidden>확인할 링크가 없습니다.<br><span class="muted">추가 탭에서 링크를 넣으면 여기서 살아 있는지 확인한 뒤 시작할 수 있습니다.</span></p>
   </section>
 
   <!-- 추가 탭 -->
@@ -78,7 +78,7 @@
       </label>
       <label class="check"><input type="checkbox" id="addAutostart"> 확인 없이 바로 다운로드 시작</label>
       <button type="submit" class="btn primary wide" id="btnAdd">＋ 링크 추가</button>
-      <p class="muted small">기본은 <b>수집됨</b> 탭에 먼저 올라가고, 온라인/오프라인 확인 후 시작합니다.</p>
+      <p class="muted small">기본은 <b>확인 대기</b> 탭에 먼저 올라갑니다. 링크가 살아 있는지 확인한 뒤 시작하세요.</p>
     </form>
   </section>
 
@@ -107,7 +107,7 @@
 
 <nav class="tabbar">
   <button class="tab-btn active" data-tab="downloads">⬇<span>다운로드</span><em class="badge" id="badgeDl" hidden></em></button>
-  <button class="tab-btn" data-tab="grabber">🧺<span>수집됨</span><em class="badge" id="badgeGrab" hidden></em></button>
+  <button class="tab-btn" data-tab="grabber">🧺<span>확인 대기</span><em class="badge" id="badgeGrab" hidden></em></button>
   <button class="tab-btn" data-tab="add">＋<span>추가</span></button>
   <button class="tab-btn" data-tab="accounts">🔑<span>계정</span><em class="badge" id="badgeAcct" hidden></em></button>
 </nav>

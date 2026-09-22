@@ -31,6 +31,8 @@ a{color:var(--accent)}
 #banners{display:flex;flex-direction:column;gap:6px;margin-top:6px}
 .banner{display:flex;align-items:center;gap:10px;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:14px}
 .banner.warn{border-color:var(--warn)}.banner.bad{border-color:var(--bad)}.banner.info{border-color:var(--accent)}
+.note{display:block;background:var(--bg2);border:1px solid var(--warn);border-left-width:4px;border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.55;color:var(--fg);margin:0}
+.note b{color:var(--warn)}
 .banner .txt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tab{display:none;padding:6px 12px 12px}.tab.active{display:block}
 .filterbar{display:flex;align-items:center;gap:8px;margin:4px 0 10px;flex-wrap:wrap}

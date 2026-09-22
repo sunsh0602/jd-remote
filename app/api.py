@@ -278,12 +278,12 @@ async def accounts_hosters(request: Request) -> list[str]:
 class AccountIn(BaseModel):
     hostname: str = Field(..., min_length=3, description="예: terabox.com")
     username: str = Field(..., min_length=1)
-    password: str = Field(..., min_length=1)
+    password: str = Field(..., min_length=1, description="비밀번호 또는 (쿠키 로그인 호스터면) 브라우저 쿠키 내보내기 텍스트")
 
 
 @router.post("/accounts")
 async def accounts_add(body: AccountIn, request: Request) -> dict:
-    # 비밀번호는 JD로 그대로 전달만 하고 jd-remote 는 저장/로그하지 않는다.
+    # 비밀번호(또는 terabox 처럼 쿠키 문자열)는 JD로 그대로 전달만 하고 jd-remote 는 저장/로그하지 않는다. strip 하지 않음.
     await _guard(_jd(request).add_account(body.hostname.strip().lower(), body.username.strip(), body.password))
     return {"ok": True}
 

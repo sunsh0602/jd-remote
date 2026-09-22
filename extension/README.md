@@ -16,6 +16,17 @@ terabox.com 로그인 쿠키를 읽어 JD Remote 서버(`/api/accounts/terabox/c
 
 **자동 전송(기본 켜짐)**: terabox.com에 로그인해서 `ndus`/`BDUSS` 쿠키가 새로 생기면 백그라운드가 3초 뒤 자동으로 전송하고 알림을 띄운다. 즉 확장 설정만 해두면 *terabox 로그인 = 계정 갱신*. 설정에서 끌 수 있다.
 
+## 권한 (최소)
+| 권한 | 이유 |
+|---|---|
+| `cookies` | terabox 쿠키 읽기, JD Remote 세션 쿠키 읽기 |
+| `storage` | 서버 주소·이메일·자동전송 여부 저장 |
+| `notifications` | 자동 전송 결과 알림 |
+| host: `*.terabox.com` 등 4개 | 그 도메인 쿠키에 접근하기 위해 |
+| optional host: `https://*/*` | 설치 시엔 아무 것도 부여되지 않고, 설정에서 저장한 JD Remote 주소 **하나만** 런타임에 요청 |
+
+크롬 "사이트 설정" 화면에 보이는 위치·카메라·마이크 등은 모든 출처에 공통으로 표시되는 기본 항목(요청 = 미부여)이며 이 확장이 요구하는 것이 아니다.
+
 ## 동작/보안
 - 읽는 쿠키: `terabox.com`/`1024terabox.com`/`terabox.app`/`teraboxapp.com` 만. 전송 대상: 설정한 JD Remote 서버만. 확장이 저장하는 것: 서버 주소·이메일·자동전송 여부(`chrome.storage.sync`).
 - JD Remote 인증: 그 사이트의 세션 쿠키(`jdr_session`)를 읽어 `X-JDR-Session` 헤더로 전달(확장→서버 요청엔 SameSite로 쿠키가 안 붙을 수 있어서).

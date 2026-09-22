@@ -269,6 +269,7 @@
   const setCookieMode = (on, prefix, forced = false) => {
     $(`#${prefix}PassField`).hidden = on; $(`#${prefix}CookieField`).hidden = !on;
     const cb = $(`#${prefix}CookieMode`); cb.checked = on; cb.disabled = forced;
+    cb.closest('label').hidden = forced; // 쿠키 전용이면 선택지 자체를 숨김
     const note = $(`#${prefix}CookieNote`); if (note) note.hidden = !forced;
   };
   $('#acctCookieMode').addEventListener('change', (e) => setCookieMode(e.target.checked, 'acct'));

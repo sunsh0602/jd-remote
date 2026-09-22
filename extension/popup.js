@@ -4,7 +4,8 @@
   const status = (msg, cls = '') => { const el = $('#status'); el.textContent = msg; el.className = cls; };
   const TERABOX_DOMAINS = ['terabox.com', '1024terabox.com', 'terabox.app', 'teraboxapp.com'];
 
-  chrome.storage.sync.get(['server'], ({ server }) => { if (server) $('#server').value = server; });
+  chrome.storage.sync.get(['server', 'label'], ({ server, label }) => { if (server) $('#server').value = server; if (label) $('#label').value = label; });
+  $('#label').addEventListener('change', () => chrome.storage.sync.set({ label: $('#label').value.trim() }));
 
   const normServer = () => { let v = $('#server').value.trim().replace(/\/+$/, ''); if (v && !/^https?:\/\//.test(v)) v = 'https://' + v; return v; };
 
@@ -25,6 +26,9 @@
 
   $('#send').addEventListener('click', async () => {
     const server = normServer(); if (!server) return status('먼저 JD Remote 주소를 저장하세요', 'bad');
+    const label = $('#label').value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(label)) return status('TeraBox 계정 이메일을 입력하세요 — JD가 이메일 형식이 아닌 아이디는 거부합니다', 'bad');
+    chrome.storage.sync.set({ label });
     $('#send').disabled = true; status('쿠키 읽는 중…');
     try {
       const all = [];
@@ -37,10 +41,10 @@
       status(`쿠키 ${cookies.length}개 전송 중…`);
       const r = await fetch(server + '/api/accounts/terabox/cookies', {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'X-JDR-Session': sess.value },
-        body: JSON.stringify({ cookies }),
+        body: JSON.stringify({ cookies, username: label }),
       });
       const j = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(j.detail?.reason || j.detail || (r.status + ' ' + r.statusText));
+      if (!r.ok) throw new Error((j.detail && j.detail.reason) || j.detail || (r.status + ' ' + r.statusText));
       const a = j.account || {};
       status(`${j.action === 'added' ? '계정 추가' : '쿠키 갱신'} 완료 ✓\n${a.hostname || 'terabox.com'} · ${a.username || ''}\n상태: ${a.valid === false || a.error ? '오류 — ' + (a.error || 'invalid') : '정상'}${j.locked ? '\n(JD Remote 잠금이 아직 안 풀렸습니다. 몇 초 후 다시 확인)' : '\nJD Remote 잠금 해제됨'}`, a.valid === false ? 'bad' : 'ok');
     } catch (e) { status('실패: ' + e.message, 'bad'); }

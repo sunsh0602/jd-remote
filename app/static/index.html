@@ -95,9 +95,9 @@
           <option value="terabox.com">TeraBox (terabox.com) — 쿠키 로그인</option>
         </select>
       </label>
-      <label class="field"><span>아이디 / 이메일</span><input id="acctUser" type="text" autocapitalize="off" autocomplete="off"></label>
+      <label class="field"><span>계정 이메일 (TeraBox는 이메일 형식 필수)</span><input id="acctUser" type="text" inputmode="email" autocapitalize="off" autocomplete="off" placeholder="me@example.com"></label>
       <label class="check"><input type="checkbox" id="acctCookieMode"> 쿠키로 로그인 (비밀번호 대신 브라우저 쿠키 붙여넣기)</label>
-      <p class="banner warn small" id="acctCookieNote" hidden>이 호스터는 JD가 <b>쿠키 로그인만</b> 지원합니다. 아이디·비밀번호로는 로그인되지 않으니 PC 브라우저에서 로그인한 뒤 쿠키를 내보내 붙여넣으세요. 아이디 칸은 구분용 라벨입니다.</p>
+      <p class="banner warn small" id="acctCookieNote" hidden>이 호스터는 JD가 <b>쿠키 로그인만</b> 지원합니다. 아이디·비밀번호로는 로그인되지 않으니 PC 브라우저에서 로그인한 뒤 쿠키를 내보내 붙여넣으세요. 아이디 칸에는 <b>TeraBox 계정 이메일</b>을 넣으세요 — JD가 이메일 형식이 아니면 계정을 거부합니다.</p>
       <label class="field" id="acctPassField"><span>비밀번호</span><input id="acctPass" type="password" autocomplete="new-password"></label>
       <label class="field" id="acctCookieField" hidden><span>쿠키 (내보내기 텍스트 그대로)</span><textarea id="acctCookie" rows="5" placeholder='PC 크롬에서 해당 사이트 로그인 → 쿠키 내보내기 확장(Cookie-Editor, EditThisCookie 등)으로 Export → 내용 전체를 여기에 붙여넣기. JSON 배열 또는 cookies.txt 형식 모두 OK.'></textarea></label>
       <button type="submit" class="btn primary wide">＋ 계정 추가</button>
@@ -120,12 +120,12 @@
     <p class="muted small" id="acctSheetInfo"></p>
     <div class="actions" id="acctSheetActions"></div>
     <form id="acctEditForm" class="add-form">
-      <h3 class="muted small" style="margin:8px 0 0">아이디/비밀번호 변경</h3>
+      <h3 class="muted small" style="margin:8px 0 0">라벨(아이디)·쿠키 변경 — JD는 둘을 함께 받으므로 라벨을 바꿀 때도 쿠키를 다시 넣어야 합니다</h3>
       <label class="field"><span>아이디 / 이메일</span><input id="acctEditUser" type="text" autocapitalize="off"></label>
       <label class="check"><input type="checkbox" id="acctEditCookieMode"> 쿠키로 갱신</label>
       <p class="banner warn small" id="acctEditCookieNote" hidden>이 호스터는 쿠키 로그인만 지원합니다. 새로 내보낸 쿠키를 붙여넣으세요.</p>
       <label class="field" id="acctEditPassField"><span>새 비밀번호</span><input id="acctEditPass" type="password" autocomplete="new-password" placeholder="변경 시 입력"></label>
-      <label class="field" id="acctEditCookieField" hidden><span>새 쿠키 (내보내기 텍스트)</span><textarea id="acctEditCookie" rows="5" placeholder="쿠키가 만료됐을 때 새로 내보낸 쿠키를 붙여넣으세요"></textarea></label>
+      <label class="field" id="acctEditCookieField" hidden><span>새 쿠키 (내보내기 텍스트)</span><textarea id="acctEditCookie" rows="5" placeholder="새로 내보낸 쿠키를 붙여넣으세요"></textarea></label>
       <button type="submit" class="btn wide">저장</button>
     </form>
   </div>

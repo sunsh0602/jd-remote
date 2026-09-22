@@ -242,10 +242,17 @@
     $('#acctInfo').textContent = accounts.length ? `계정 ${accounts.length}개` : '호스터 계정';
     $('#acctEmpty').hidden = accounts.length > 0;
     $('#acctList').innerHTML = accounts.map((a) => {
-      const st = !a.enabled ? ['paused', '사용 안 함'] : a.error ? ['failed', esc(a.error)] : a.valid === false ? ['failed', '오류'] : ['finished', '정상'];
-      const traffic = a.trafficMax > 0 ? `트래픽 ${fmtBytes(a.trafficLeft)} / ${fmtBytes(a.trafficMax)}` : (a.trafficLeft === -1 ? '트래픽 무제한' : '');
-      return `<li class="card ${st[0]}" data-acct="${a.uuid}"><div class="title"><span class="name">${esc(a.hostname)}<br><span class="muted small">${esc(a.username || '')}</span></span><span class="tag ${st[0]}">${st[1]}</span></div>
-        <div class="meta"><span>만료 <b>${fmtDate(a.validUntil)}</b></span>${traffic ? `<span>${traffic}</span>` : ''}</div></li>`;
+      const pending = a.enabled && a.valid == null && !a.error;   // JD가 아직 검증 안 함
+      const st = !a.enabled ? ['paused', '사용 안 함'] : a.error ? ['failed', esc(a.error)] : a.valid === false ? ['failed', '오류'] : pending ? ['waiting', '확인 중'] : ['finished', '정상'];
+      const meta = [];
+      if (!pending && a.valid) {
+        meta.push(`만료 <b>${a.validUntil > 0 ? fmtDate(a.validUntil) : '정보 없음'}</b>`);
+        if (a.trafficMax > 0) meta.push(`트래픽 ${fmtBytes(a.trafficLeft)} / ${fmtBytes(a.trafficMax)}`);
+        else if (a.trafficLeft === -1) meta.push('트래픽 무제한');
+      } else if (pending) meta.push('JD가 계정을 확인하는 중입니다 — ↻ 갱신을 눌러 재검증');
+      const label = a.username ? esc(a.username) : '<i>라벨 없음</i>';
+      return `<li class="card ${st[0]}" data-acct="${a.uuid}"><div class="title"><span class="name">${esc(a.hostname)}<br><span class="muted small">${label}</span></span><span class="tag ${st[0]}">${st[1]}</span></div>
+        <div class="meta">${meta.map((m) => `<span>${m}</span>`).join('')}</div></li>`;
     }).join('');
     $$('#acctList .card').forEach((c) => c.addEventListener('click', () => openAcctSheet(accounts.find((a) => a.uuid === +c.dataset.acct))));
   }
@@ -260,7 +267,7 @@
     ];
     $('#acctSheetActions').innerHTML = A.map(([l, , d], i) => `<button class="btn ${d ? 'danger' : ''}" data-i="${i}">${l}</button>`).join('');
     $$('#acctSheetActions .btn').forEach((b) => b.addEventListener('click', async () => { const [l, fn] = A[+b.dataset.i]; closeSheets(); await act(l, fn); loadAccounts(); }));
-    $('#acctEditForm').onsubmit = async (e) => { e.preventDefault(); const u = $('#acctEditUser').value.trim(), pw = $('#acctEditCookieMode').checked ? $('#acctEditCookie').value.trim() : $('#acctEditPass').value; if (!u || !pw) return toast('아이디와 새 비밀번호(또는 쿠키)를 모두 입력하세요', true); closeSheets(); await act('계정 변경', () => api(`/accounts/${a.uuid}`, { method: 'PUT', body: { username: u, password: pw } })); loadAccounts(); };
+    $('#acctEditForm').onsubmit = async (e) => { e.preventDefault(); const u = $('#acctEditUser').value.trim(), pw = $('#acctEditCookieMode').checked ? $('#acctEditCookie').value.trim() : $('#acctEditPass').value; if (!u || !pw) return toast('라벨(아이디)과 함께 쿠키(또는 비밀번호)도 넣어야 합니다 — JD가 둘을 같이 받습니다', true); closeSheets(); await act('계정 변경', () => api(`/accounts/${a.uuid}`, { method: 'PUT', body: { username: u, password: pw } })); loadAccounts(); };
     $('#acctSheet').hidden = false;
   }
   // 쿠키 로그인 호스터(비밀번호 자리에 브라우저 쿠키를 넣는 JD 플러그인들) — 도메인 입력 시 자동으로 쿠키 모드

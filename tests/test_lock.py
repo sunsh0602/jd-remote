@@ -53,7 +53,7 @@ def _login(c):
 def test_lock_flow_end_to_end(monkeypatch):
     import app.api as api_mod
     monkeypatch.setattr(api_mod.asyncio, "sleep", _nosleep)
-    acct = {"uuid": 7, "hostname": "terabox.com", "username": "me", "enabled": True, "valid": True, "error": None}
+    acct = {"uuid": 7, "hostname": "terabox.com", "username": "me@x.io", "enabled": True, "valid": True, "error": None}
     with TestClient(app) as c:
         app.state.auth = Auth("http://jdweb:5800", "test-secret", transport=_jd_web(_webauth_handler))
         app.state.jd = FakeJD([acct])
@@ -73,7 +73,7 @@ def test_lock_flow_end_to_end(monkeypatch):
                    headers={"X-JDR-Session": token})
         assert r.status_code == 200, r.text
         j = r.json(); assert j["action"] == "updated" and j["locked"] is False and j["account"]["valid"] is True
-        assert app.state.jd.calls[0][:3] == ("update", 7, "me") and '"ndus"' in app.state.jd.calls[0][3]
+        assert app.state.jd.calls[0][:3] == ("update", 7, "me@x.io") and '"ndus"' in app.state.jd.calls[0][3]
         # 잠금 해제 후 정상
         c.cookies.set("jdr_session", token)
         assert c.get("/api/state").status_code == 200
@@ -89,10 +89,13 @@ def test_cookie_push_rejects_without_login_cookie(monkeypatch):
         _login(c)
         r = c.post("/api/accounts/terabox/cookies", json={"cookies": [{"name": "foo", "value": "x"}]})
         assert r.status_code == 400 and "ndus" in r.json()["detail"]
-        # 계정이 없으면 새로 추가
+        # 이메일 없이는 거부 (JD terabox 플러그인이 이메일 아닌 아이디를 거부함)
         r = c.post("/api/accounts/terabox/cookies", json={"cookies": [{"name": "ndus", "value": "x"}], "username": "me"})
+        assert r.status_code == 400 and "이메일" in r.json()["detail"]
+        # 계정이 없으면 새로 추가
+        r = c.post("/api/accounts/terabox/cookies", json={"cookies": [{"name": "ndus", "value": "x"}], "username": "me@x.io"})
         assert r.status_code == 200 and r.json()["action"] == "added"
-        assert app.state.jd.calls[0][:3] == ("add", "terabox.com", "me")
+        assert app.state.jd.calls[0][:3] == ("add", "terabox.com", "me@x.io")
 
 
 async def _nosleep(*a, **k):

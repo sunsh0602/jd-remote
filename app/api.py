@@ -16,6 +16,7 @@ from .lock import LockState, is_terabox
 router = APIRouter(prefix="/api", dependencies=[Depends(require_api_auth)])
 
 URL_RE = re.compile(r"https?://[^\s<>\"'()\[\]{}]+", re.IGNORECASE)
+EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 
 
 def extract_urls(text: str) -> list[str]:
@@ -289,6 +290,8 @@ class AccountIn(BaseModel):
 @router.post("/accounts")
 async def accounts_add(body: AccountIn, request: Request) -> dict:
     # 비밀번호(또는 terabox 처럼 쿠키 문자열)는 JD로 그대로 전달만 하고 jd-remote 는 저장/로그하지 않는다. strip 하지 않음.
+    if is_terabox(body.hostname) and not EMAIL_RE.match(body.username.strip()):
+        raise HTTPException(400, "TeraBox 계정은 아이디 칸에 이메일 주소를 넣어야 합니다 (JD 플러그인 요구사항).")
     await _guard(_jd(request).add_account(body.hostname.strip().lower(), body.username.strip(), body.password))
     return {"ok": True}
 
@@ -300,6 +303,10 @@ class AccountUpdate(BaseModel):
 
 @router.put("/accounts/{uuid}")
 async def accounts_update(uuid: int, body: AccountUpdate, request: Request) -> dict:
+    accts = await _guard(_jd(request).accounts())
+    a = next((x for x in accts if x.get("uuid") == uuid), None)
+    if a and is_terabox(a.get("hostname")) and not EMAIL_RE.match(body.username.strip()):
+        raise HTTPException(400, "TeraBox 계정은 아이디 칸에 이메일 주소를 넣어야 합니다 (JD 플러그인 요구사항).")
     await _guard(_jd(request).update_account(uuid, body.username.strip(), body.password))
     return {"ok": True}
 
@@ -332,24 +339,36 @@ async def terabox_cookies(body: TeraboxCookies, request: Request) -> dict:
         raise HTTPException(400, "TeraBox 로그인 쿠키(ndus/BDUSS)가 없습니다. terabox.com에 로그인된 상태에서 다시 시도하세요.")
     accts = await _guard(jd.accounts())
     tb = [a for a in accts if is_terabox(a.get("hostname"))]
+    cur_label = (tb[0].get("username") or tb[0].get("userName") or "") if tb else ""
+    label = (body.username or "").strip() or cur_label
+    if not EMAIL_RE.match(label):
+        raise HTTPException(400, "TeraBox 계정 이메일이 필요합니다 — JD 플러그인은 아이디 칸이 이메일 형식이 아니면 계정을 거부합니다. 확장의 이메일 칸을 채우세요.")
     if tb:
         a = tb[0]
-        await _guard(jd.update_account(a["uuid"], a.get("username") or a.get("userName") or body.username or "terabox", cookie_str))
+        await _guard(jd.update_account(a["uuid"], label, cookie_str))
         action = "updated"
         uuid = a["uuid"]
     else:
-        await _guard(jd.add_account("terabox.com", body.username or "terabox", cookie_str))
+        await _guard(jd.add_account("terabox.com", label, cookie_str))
         action = "added"
         uuid = None
-    # JD가 재검증할 시간을 주고 잠금 재평가
-    await asyncio.sleep(2.5)
+    # 새로 추가했으면 uuid 를 찾아 재검증을 걸고, valid 가 결정될 때까지 잠깐(최대 ~8초) 기다린다
+    await asyncio.sleep(1.5)
+    accts = await _guard(jd.accounts())
+    if uuid is None:
+        cand = [a for a in accts if is_terabox(a.get("hostname"))]
+        uuid = cand[-1]["uuid"] if cand else None
     if uuid:
         try:
             await jd.refresh_accounts([uuid])
-            await asyncio.sleep(2.0)
         except (JDError, JDUnavailable):
             pass
-    accts = await _guard(jd.accounts())
+        for _ in range(4):
+            await asyncio.sleep(2.0)
+            accts = await _guard(jd.accounts())
+            a = next((x for x in accts if x.get("uuid") == uuid), None)
+            if a is None or a.get("valid") is not None or a.get("error"):
+                break
     lock: LockState = request.app.state.lock
     lock.update_from_accounts(accts)
     acct = next((a for a in accts if is_terabox(a.get("hostname"))), None)

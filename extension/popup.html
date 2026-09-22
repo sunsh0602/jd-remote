@@ -14,6 +14,8 @@ button:disabled{opacity:.5;cursor:default}
 <label>JD Remote 주소</label>
 <input id="server" type="url" placeholder="https://jdr.example.com" autocomplete="off">
 <button class="sec" id="save">주소 저장 (권한 요청)</button>
+<label>TeraBox 계정 이메일 (필수 — JD가 이메일 형식이 아니면 계정을 거부합니다)</label>
+<input id="label" type="email" placeholder="me@example.com" autocomplete="off" required>
 <button id="send">terabox.com 쿠키 → JD Remote 전송</button>
 <div id="status"></div>
 <p class="muted">순서: ① 이 브라우저로 terabox.com 로그인 ② JD Remote에 로그인된 상태 ③ 위 버튼. 쿠키는 JD Remote 서버로만 전송되고 이 확장은 아무것도 저장하지 않습니다.</p>

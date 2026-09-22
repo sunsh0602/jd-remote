@@ -250,7 +250,7 @@
       const st = !a.enabled ? ['paused', '사용 안 함'] : a.error ? ['failed', esc(a.error)] : a.valid === false ? ['failed', '오류'] : pending ? ['waiting', '확인 중'] : ['finished', '정상'];
       const meta = [];
       if (!pending && a.valid) {
-        meta.push(`만료 <b>${a.validUntil > 0 ? fmtDate(a.validUntil) : '정보 없음'}</b>`);
+        meta.push(`다음 확인 <b>${a.validUntil > 0 ? fmtDate(a.validUntil) : '정보 없음'}</b>`);
         if (a.trafficMax > 0) meta.push(`트래픽 ${fmtBytes(a.trafficLeft)} / ${fmtBytes(a.trafficMax)}`);
         else if (a.trafficLeft === -1) meta.push('트래픽 무제한');
       } else if (pending) meta.push('JD가 계정을 확인하는 중입니다 — ↻ 갱신을 눌러 재검증');
@@ -262,7 +262,7 @@
   }
   function openAcctSheet(a) {
     if (!a) return;
-    $('#acctSheetTitle').textContent = a.hostname; $('#acctSheetInfo').textContent = `${a.username || ''} · 만료 ${fmtDate(a.validUntil)}${a.error ? ' · ' + a.error : ''}`;
+    $('#acctSheetTitle').textContent = a.hostname; $('#acctSheetInfo').textContent = `${a.username || ''} · 다음 확인 ${fmtDate(a.validUntil)}${a.error ? ' · ' + a.error : ''}`;
     $('#acctEditUser').value = a.username || ''; $('#acctEditPass').value = ''; $('#acctEditCookie').value = ''; setCookieMode(isCookieHoster(a.hostname), 'acctEdit', isCookieHoster(a.hostname));
     const A = [
       [a.enabled ? '⏸ 사용 안 함' : '▶ 사용', () => api(`/accounts/${a.uuid}/${a.enabled ? 'disable' : 'enable'}`, { method: 'POST' })],

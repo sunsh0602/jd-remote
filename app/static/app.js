@@ -10,7 +10,7 @@
     set(k, v) { try { localStorage.setItem('jdr.' + k, JSON.stringify(v)); } catch (e) {} },
   };
   const state = {
-    data: null, filter: LS.get('filter', 'all'), search: '', tab: LS.get('tab', 'downloads'),
+    data: null, filter: LS.get('filter', 'all'), tab: LS.get('tab', 'downloads'),
     pollMs: LS.get('pollMs', 3000),
     clipboard: LS.get('clipboard', true), lastClip: LS.get('lastClip', ''),
     speeds: new Array(60).fill(0), timer: null, inflight: false, expanded: new Set(), openPkg: null,
@@ -89,7 +89,6 @@
   // ── 렌더: 다운로드 목록 ───────────────────────────────────────────────
   function setFilter(f) { state.filter = f; LS.set('filter', f); $$('#filterChips .chip').forEach((c) => c.classList.toggle('active', c.dataset.f === f)); renderPackages(); }
   $$('#filterChips .chip').forEach((c) => c.addEventListener('click', () => setFilter(c.dataset.f)));
-  $('#search').addEventListener('input', (e) => { state.search = e.target.value.trim().toLowerCase(); renderPackages(); });
 
   function pkgCard(p) {
     const pct = Math.round((p.progress || 0) * 100);
@@ -113,7 +112,6 @@
     $('#badgeDl').hidden = !pk.some((p) => p.kind === 'running');
     $('#badgeDl').textContent = pk.filter((p) => p.kind === 'running').length;
     if (state.filter !== 'all') pk = pk.filter((p) => p.kind === state.filter);
-    if (state.search) pk = pk.filter((p) => p.name.toLowerCase().includes(state.search));
     const order = { running: 0, waiting: 1, failed: 2, paused: 3, finished: 4 };
     pk = [...pk].sort((a, b) => (order[a.kind] != null ? order[a.kind] : 9) - (order[b.kind] != null ? order[b.kind] : 9));
     $('#pkgList').innerHTML = pk.map(pkgCard).join('');

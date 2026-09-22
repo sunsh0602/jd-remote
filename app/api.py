@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import re
 import time
 from typing import Any
@@ -9,6 +10,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from . import cookie_meta
 from .auth import require_api_auth
 from .jd_client import JDClient, JDError, JDUnavailable
 from .lock import LockState, is_terabox
@@ -283,11 +285,17 @@ async def links_retry(ids: Ids, request: Request) -> dict:
 
 # ── 호스터 계정 ───────────────────────────────────────────────────────────
 def _acct_view(a: dict) -> dict:
-    return {
+    v = {
         "uuid": a.get("uuid"), "hostname": a.get("hostname"), "username": a.get("username") or a.get("userName"),
         "enabled": a.get("enabled", True), "valid": a.get("valid"), "error": a.get("error"),
         "validUntil": a.get("validUntil"), "trafficLeft": a.get("trafficLeft"), "trafficMax": a.get("trafficMax"),
     }
+    # 쿠키 로그인 계정이면 '넣어 둔 쿠키가 언제까지 유효한지'가 실제로 중요한 날짜다.
+    ck = cookie_meta.get_expiry(a.get("hostname") or "")
+    if ck:
+        v["cookieExpiry"] = ck.get("expiry")
+        v["cookieName"] = ck.get("cookie")
+    return v
 
 
 @router.get("/accounts")
@@ -327,6 +335,17 @@ async def accounts_update(uuid: int, body: AccountUpdate, request: Request) -> d
     if a and is_terabox(a.get("hostname")) and not EMAIL_RE.match(body.username.strip()):
         raise HTTPException(400, "TeraBox 계정은 아이디 칸에 이메일 주소를 넣어야 합니다 (JD 플러그인 요구사항).")
     await _guard(_jd(request).update_account(uuid, body.username.strip(), body.password))
+    # 붙여넣은 값이 쿠키 내보내기(JSON 배열 또는 cookies.txt)면 만료 날짜만 기록한다.
+    if a:
+        raw: Any = body.password
+        try:
+            parsed = json.loads(raw)
+            raw = parsed if isinstance(parsed, list) else raw
+        except (TypeError, ValueError):
+            pass
+        exp = cookie_meta.earliest_auth_expiry(raw)
+        if exp:
+            cookie_meta.save_expiry(a.get("hostname") or "", exp[0], exp[1])
     return {"ok": True}
 
 
@@ -348,14 +367,17 @@ class TeraboxCookies(BaseModel):
 @router.post("/accounts/terabox/cookies")
 async def terabox_cookies(body: TeraboxCookies, request: Request) -> dict:
     """크롬 확장이 호출. 기존 TeraBox 계정이 있으면 쿠키만 교체(updateAccount), 없으면 새로 추가.
-    잠금 상태에서도 허용되는 유일한 API. 쿠키는 JD로 전달만 하고 저장/로그하지 않는다."""
-    import json as _json
+    잠금 상태에서도 허용되는 유일한 API. 쿠키 값은 JD로 전달만 하고 저장/로그하지 않는다(만료 날짜만 기록)."""
     jd = _jd(request)
-    cookie_str = body.cookies if isinstance(body.cookies, str) else _json.dumps(body.cookies, ensure_ascii=False)
+    cookie_str = body.cookies if isinstance(body.cookies, str) else json.dumps(body.cookies, ensure_ascii=False)
     if not cookie_str.strip():
         raise HTTPException(400, "쿠키가 비어 있습니다.")
     if isinstance(body.cookies, list) and not any(str(c.get("name", "")).lower() in ("ndus", "bduss", "stoken") for c in body.cookies if isinstance(c, dict)):
         raise HTTPException(400, "TeraBox 로그인 쿠키(ndus/BDUSS)가 없습니다. terabox.com에 로그인된 상태에서 다시 시도하세요.")
+    # 인증 쿠키 중 가장 먼저 만료되는 것이 JD 입장의 실제 한계다(값은 저장하지 않고 날짜만).
+    exp = cookie_meta.earliest_auth_expiry(body.cookies)
+    if exp:
+        cookie_meta.save_expiry("terabox.com", exp[0], exp[1])
     accts = await _guard(jd.accounts())
     tb = [a for a in accts if is_terabox(a.get("hostname"))]
     cur_label = (tb[0].get("username") or tb[0].get("userName") or "") if tb else ""

@@ -119,3 +119,54 @@ def test_dest_path_rejects_outside_and_traversal():
     for bad in ["/etc", "/volume1/homes/sunsh/Other", "../x", "/volume1/homes/sunsh/Downloads/../x"]:
         with pytest.raises(HTTPException):
             _dest_path(bad, _S)
+
+
+# ── 쿠키 만료 추출 (cookie_meta) ─────────────────────────────────────────
+def test_cookie_expiry_picks_earliest_auth_cookie():
+    from app.cookie_meta import earliest_auth_expiry
+    cookies = [
+        {"name": "ndus", "expirationDate": 1821622962.344887},      # 1년
+        {"name": "ndut_fmt", "expirationDate": 1792681952},          # 30일 ← 기준
+        {"name": "ndut_fmv", "expirationDate": 1792681952.777845},
+        {"name": "browserid", "expirationDate": 1795270925.6},       # 인증 아님
+        {"name": "_ga", "expirationDate": 1700000000},               # 분석용, 무시
+        {"name": "lang", "expirationDate": 1792681952.3},            # 표시 설정, 무시
+    ]
+    assert earliest_auth_expiry(cookies) == (1792681952, "ndut_fmt")
+
+
+def test_cookie_expiry_ignores_session_cookies_and_junk():
+    from app.cookie_meta import earliest_auth_expiry
+    assert earliest_auth_expiry([{"name": "csrfToken", "session": True}]) is None
+    assert earliest_auth_expiry([{"name": "_fbp", "expirationDate": 1}]) is None
+    assert earliest_auth_expiry([]) is None
+    assert earliest_auth_expiry("쿠키 아님") is None
+    assert earliest_auth_expiry([{"name": "ndus", "expirationDate": "이상한값"}]) is None
+
+
+def test_cookie_expiry_from_netscape_text():
+    from app.cookie_meta import earliest_auth_expiry
+    txt = (
+        "# Netscape HTTP Cookie File\n"
+        ".terabox.com\tTRUE\t/\tTRUE\t1821622962\tndus\tAAA\n"
+        ".terabox.com\tTRUE\t/\tFALSE\t1792681952\tndut_fmt\tBBB\n"
+        ".terabox.com\tTRUE\t/\tFALSE\t1700000000\t_ga\tCCC\n"
+    )
+    assert earliest_auth_expiry(txt) == (1792681952, "ndut_fmt")
+
+
+def test_cookie_expiry_store_roundtrip(tmp_path, monkeypatch):
+    from app import cookie_meta
+    monkeypatch.setattr(cookie_meta, "STORE_PATH", str(tmp_path / "s.json"))
+    assert cookie_meta.get_expiry("terabox.com") is None
+    cookie_meta.save_expiry("terabox.com", 1792681952, "ndut_fmt")
+    got = cookie_meta.get_expiry("TeraBox.com")   # 대소문자 무관
+    assert got == {"expiry": 1792681952, "cookie": "ndut_fmt"}
+
+
+def test_cookie_expiry_store_survives_unwritable_path(monkeypatch):
+    """상태 파일을 못 써도 예외가 밖으로 나가면 안 된다(쿠키 갱신 자체는 성공해야 함)."""
+    from app import cookie_meta
+    monkeypatch.setattr(cookie_meta, "STORE_PATH", "/proc/nope/s.json")
+    cookie_meta.save_expiry("terabox.com", 1792681952, "ndut_fmt")
+    assert cookie_meta.get_expiry("terabox.com") is None

@@ -239,6 +239,15 @@
   // ── 계정 탭 ───────────────────────────────────────────────────────────
   let accounts = [];
   const fmtDate = (ms) => (ms && ms > 0) ? new Date(ms).toLocaleDateString('ko-KR') : (ms === -1 ? '무기한' : '—');
+  const daysLeft = (sec) => Math.ceil((sec * 1000 - Date.now()) / 86400000);
+  // 쿠키 로그인은 넣어 둔 쿠키가 만료되면 끝난다. 가장 먼저 만료되는 인증 쿠키가 기준.
+  function cookieExpiryText(a) {
+    const d = daysLeft(a.cookieExpiry), when = fmtDate(a.cookieExpiry * 1000);
+    const name = a.cookieName ? ` (${esc(a.cookieName)} 기준)` : '';
+    if (d < 0) return `쿠키 만료됨 <b>${when}</b>${name} — 확장으로 갱신하세요`;
+    if (d <= 7) return `쿠키 만료 <b>${when}</b> · ${d}일 남음${name} — 곧 갱신 필요`;
+    return `쿠키 만료 <b>${when}</b> · ${d}일 남음${name}`;
+  }
   async function loadAccounts() {
     try { accounts = await api('/accounts'); } catch (e) { $('#acctList').innerHTML = `<li class="muted small">불러오기 실패: ${esc(e.message)}</li>`; return; }
     const bad = accounts.filter((a) => a.enabled && (a.valid === false || a.error)).length;
@@ -249,6 +258,7 @@
       const pending = a.enabled && a.valid == null && !a.error;   // JD가 아직 검증 안 함
       const st = !a.enabled ? ['paused', '사용 안 함'] : a.error ? ['failed', esc(a.error)] : a.valid === false ? ['failed', '오류'] : pending ? ['waiting', '확인 중'] : ['finished', '정상'];
       const meta = [];
+      if (a.cookieExpiry) meta.push(cookieExpiryText(a));
       if (!pending && a.valid) {
         meta.push(`다음 확인 <b>${a.validUntil > 0 ? fmtDate(a.validUntil) : '정보 없음'}</b>`);
         if (a.trafficMax > 0) meta.push(`트래픽 ${fmtBytes(a.trafficLeft)} / ${fmtBytes(a.trafficMax)}`);

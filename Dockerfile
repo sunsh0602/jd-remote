@@ -4,7 +4,7 @@ WORKDIR /srv
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 COPY app ./app
-RUN useradd -r -u 10001 jdr && chown -R jdr:jdr /srv
+RUN useradd -r -u 10001 jdr && mkdir -p /data && chown -R jdr:jdr /srv /data
 USER jdr
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=4).status in (200,503) else 1)"

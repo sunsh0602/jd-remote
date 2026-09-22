@@ -85,3 +85,22 @@ async def test_speed_limit_set_order():
     await jd.set_speed_limit(True, 1048576)
     assert calls[0][0] == "/config/set" and calls[0][1][2:] == ["DownloadSpeedLimit", 1048576]
     assert calls[1][0] == "/config/set" and calls[1][1][2:] == ["DownloadSpeedLimitEnabled", True]
+
+
+@pytest.mark.asyncio
+async def test_account_calls():
+    calls = []
+
+    def handler(req: httpx.Request):
+        calls.append((req.url.path, json.loads(req.content)["params"]))
+        return httpx.Response(200, json={"data": []})
+
+    jd = make_client(handler)
+    await jd.add_account("terabox.com", "me@x.io", "s3cret")
+    await jd.update_account(42, "me@x.io", "n3w")
+    await jd.set_accounts_enabled(False, [42])
+    await jd.remove_accounts([42])
+    assert calls[0] == ("/accountsV2/addAccount", ["terabox.com", "me@x.io", "s3cret"])
+    assert calls[1] == ("/accountsV2/updateAccount", [42, "me@x.io", "n3w"])
+    assert calls[2] == ("/accountsV2/disableAccounts", [[42]])
+    assert calls[3] == ("/accountsV2/removeAccounts", [[42]])

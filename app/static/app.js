@@ -11,7 +11,7 @@
   };
   const state = {
     data: null, filter: LS.get('filter', 'all'), search: '', tab: LS.get('tab', 'downloads'),
-    pollMs: LS.get('pollMs', 3000), presets: LS.get('presets', ['게임', 'APK', '영상']),
+    pollMs: LS.get('pollMs', 3000),
     clipboard: LS.get('clipboard', true), lastClip: LS.get('lastClip', ''),
     speeds: new Array(60).fill(0), timer: null, inflight: false, expanded: new Set(), openPkg: null,
   };
@@ -43,6 +43,7 @@
     $$('.tab').forEach((t) => t.classList.toggle('active', t.id === 'tab-' + name));
     $$('.tab-btn').forEach((b) => b.classList.toggle('active', b.dataset.tab === name));
     window.scrollTo(0, 0);
+    if (name === 'accounts') loadAccounts();
   }
   $$('.tab-btn').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
 
@@ -203,18 +204,13 @@
   addText.addEventListener('input', updateCount);
   $('#btnClearText').addEventListener('click', () => { addText.value = ''; updateCount(); });
   $('#btnPaste').addEventListener('click', async () => { try { const t = await navigator.clipboard.readText(); if (!extractUrls(t).length) return toast('클립보드에 URL이 없습니다', true); addText.value = (addText.value ? addText.value + '\n' : '') + t; updateCount(); } catch (e) { toast('클립보드를 읽을 수 없습니다 (권한)', true); } });
-  function renderPresets() {
-    $('#folderChips').innerHTML = state.presets.map((p) => `<button type="button" class="chip ${$('#addFolder').value === p ? 'active' : ''}" data-p="${esc(p)}">${esc(p)}</button>`).join('');
-    $$('#folderChips .chip').forEach((c) => c.addEventListener('click', () => { const f = $('#addFolder'); f.value = f.value === c.dataset.p ? '' : c.dataset.p; renderPresets(); }));
-  }
-  $('#addFolder').addEventListener('input', renderPresets);
   $('#addAutostart').checked = LS.get('autostart', false);
   $('#addAutostart').addEventListener('change', (e) => LS.set('autostart', e.target.checked));
   $('#addForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const body = { text: addText.value, packageName: $('#addPackage').value.trim() || null, destFolder: $('#addFolder').value.trim() || null, autostart: $('#addAutostart').checked };
+    const body = { text: addText.value, destFolder: $('#addFolder').value.trim() || null, autostart: $('#addAutostart').checked };
     const r = await act('링크 추가', () => api('/links', { method: 'POST', body }));
-    if (r) { addText.value = ''; $('#addPackage').value = ''; updateCount(); showTab(body.autostart ? 'downloads' : 'grabber'); }
+    if (r) { addText.value = ''; updateCount(); showTab(body.autostart ? 'downloads' : 'grabber'); }
   });
   // share_target / ?add= 진입
   const params = new URLSearchParams(location.search);
@@ -235,6 +231,47 @@
     } catch (e) {}
   }
 
+  // ── 계정 탭 ───────────────────────────────────────────────────────────
+  let accounts = []; let hostersLoaded = false;
+  const fmtDate = (ms) => (ms && ms > 0) ? new Date(ms).toLocaleDateString('ko-KR') : (ms === -1 ? '무기한' : '—');
+  async function loadAccounts() {
+    try { accounts = await api('/accounts'); } catch (e) { $('#acctList').innerHTML = `<li class="muted small">불러오기 실패: ${esc(e.message)}</li>`; return; }
+    const bad = accounts.filter((a) => a.enabled && (a.valid === false || a.error)).length;
+    $('#badgeAcct').hidden = !bad; $('#badgeAcct').textContent = bad;
+    $('#acctInfo').textContent = accounts.length ? `계정 ${accounts.length}개` : '호스터 계정';
+    $('#acctEmpty').hidden = accounts.length > 0;
+    $('#acctList').innerHTML = accounts.map((a) => {
+      const st = !a.enabled ? ['paused', '사용 안 함'] : a.error ? ['failed', esc(a.error)] : a.valid === false ? ['failed', '오류'] : ['finished', '정상'];
+      const traffic = a.trafficMax > 0 ? `트래픽 ${fmtBytes(a.trafficLeft)} / ${fmtBytes(a.trafficMax)}` : (a.trafficLeft === -1 ? '트래픽 무제한' : '');
+      return `<li class="card ${st[0]}" data-acct="${a.uuid}"><div class="title"><span class="name">${esc(a.hostname)}<br><span class="muted small">${esc(a.username || '')}</span></span><span class="tag ${st[0]}">${st[1]}</span></div>
+        <div class="meta"><span>만료 <b>${fmtDate(a.validUntil)}</b></span>${traffic ? `<span>${traffic}</span>` : ''}</div></li>`;
+    }).join('');
+    $$('#acctList .card').forEach((c) => c.addEventListener('click', () => openAcctSheet(accounts.find((a) => a.uuid === +c.dataset.acct))));
+    if (!hostersLoaded) { hostersLoaded = true; api('/accounts/hosters').then((h) => { $('#hosterList').innerHTML = h.map((x) => `<option value="${esc(x)}">`).join(''); }).catch(() => {}); }
+  }
+  function openAcctSheet(a) {
+    if (!a) return;
+    $('#acctSheetTitle').textContent = a.hostname; $('#acctSheetInfo').textContent = `${a.username || ''} · 만료 ${fmtDate(a.validUntil)}${a.error ? ' · ' + a.error : ''}`;
+    $('#acctEditUser').value = a.username || ''; $('#acctEditPass').value = '';
+    const A = [
+      [a.enabled ? '⏸ 사용 안 함' : '▶ 사용', () => api(`/accounts/${a.uuid}/${a.enabled ? 'disable' : 'enable'}`, { method: 'POST' })],
+      ['↻ 상태 갱신', () => api(`/accounts/${a.uuid}/refresh`, { method: 'POST' })],
+      ['🗑 계정 삭제', async () => { if (!confirm(`${a.hostname} (${a.username}) 계정을 삭제할까요?`)) throw new Error('취소'); return api('/accounts/remove', { method: 'POST', body: { ids: [a.uuid] } }); }, true],
+    ];
+    $('#acctSheetActions').innerHTML = A.map(([l, , d], i) => `<button class="btn ${d ? 'danger' : ''}" data-i="${i}">${l}</button>`).join('');
+    $$('#acctSheetActions .btn').forEach((b) => b.addEventListener('click', async () => { const [l, fn] = A[+b.dataset.i]; closeSheets(); await act(l, fn); loadAccounts(); }));
+    $('#acctEditForm').onsubmit = async (e) => { e.preventDefault(); const u = $('#acctEditUser').value.trim(), pw = $('#acctEditPass').value; if (!u || !pw) return toast('아이디와 새 비밀번호를 모두 입력하세요', true); closeSheets(); await act('계정 변경', () => api(`/accounts/${a.uuid}`, { method: 'PUT', body: { username: u, password: pw } })); loadAccounts(); };
+    $('#acctSheet').hidden = false;
+  }
+  $('#acctForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const body = { hostname: $('#acctHost').value.trim(), username: $('#acctUser').value.trim(), password: $('#acctPass').value };
+    if (!body.hostname || !body.username || !body.password) return toast('호스터·아이디·비밀번호를 모두 입력하세요', true);
+    const r = await act('계정 추가', () => api('/accounts', { method: 'POST', body }));
+    if (r) { $('#acctHost').value = ''; $('#acctUser').value = ''; $('#acctPass').value = ''; setTimeout(loadAccounts, 1500); }
+  });
+  $('#btnAcctRefreshAll').addEventListener('click', async () => { for (const a of accounts) { try { await api(`/accounts/${a.uuid}/refresh`, { method: 'POST' }); } catch (e) {} } toast('갱신 요청'); setTimeout(loadAccounts, 2000); });
+
   // ── 상단 버튼 ─────────────────────────────────────────────────────────
   $('#btnToggleRun').addEventListener('click', (e) => { const s = e.currentTarget.dataset.state; if (!s) return; act({ pause: '일시정지', resume: '재개', start: '시작' }[s], () => api('/control/' + s, { method: 'POST' })); });
   $('#btnCleanup').addEventListener('click', () => { const n = ((state.data && state.data.packages) || []).filter((p) => p.kind === 'finished').length; if (!n) return toast('완료된 항목이 없습니다'); if (confirm(`완료된 ${n}개를 목록에서 정리할까요? (파일은 유지)`)) act('완료 정리', () => api('/cleanup-finished', { method: 'POST' })); });
@@ -243,8 +280,7 @@
   $('#spApply').addEventListener('click', () => { const mb = parseFloat($('#spValue').value); closeSheets(); act('속도 제한 적용', () => api('/speedlimit', { method: 'PUT', body: { enabled: $('#spEnabled').checked, limit: mb > 0 ? Math.round(mb * 1048576) : null } })); });
 
   // ── 설정 시트 ─────────────────────────────────────────────────────────
-  $('#settingsBtn').addEventListener('click', () => { $('#setPresets').value = state.presets.join(', '); $('#setPoll').value = Math.round(state.pollMs / 1000); $('#setClipboard').checked = state.clipboard; $('#settingsSheet').hidden = false; });
-  $('#setPresets').addEventListener('change', (e) => { state.presets = e.target.value.split(',').map((s) => s.trim()).filter(Boolean); LS.set('presets', state.presets); renderPresets(); });
+  $('#settingsBtn').addEventListener('click', () => { $('#setPoll').value = Math.round(state.pollMs / 1000); $('#setClipboard').checked = state.clipboard; $('#settingsSheet').hidden = false; });
   $('#setPoll').addEventListener('change', (e) => { state.pollMs = Math.max(1, Math.min(60, +e.target.value || 3)) * 1000; LS.set('pollMs', state.pollMs); schedule(); });
   $('#setClipboard').addEventListener('change', (e) => { state.clipboard = e.target.checked; LS.set('clipboard', state.clipboard); });
   function closeSheets() { $$('.sheet').forEach((s) => (s.hidden = true)); state.openPkg = null; }
@@ -268,7 +304,7 @@
   document.addEventListener('touchend', (e) => { if (py0 != null && hint.classList.contains('show')) { refresh(); toast('새로 고침'); } hint.classList.remove('show'); py0 = null; });
 
   // ── 시작 ─────────────────────────────────────────────────────────────
-  renderPresets(); updateCount(); showTab(state.tab); setFilter(state.filter); refresh(); schedule();
+  updateCount(); showTab(state.tab); setFilter(state.filter); refresh(); schedule();
   setTimeout(checkClipboard, 400);
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
 })();

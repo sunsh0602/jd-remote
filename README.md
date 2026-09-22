@@ -8,8 +8,9 @@ JD 로컬 RemoteAPI(3128)를 호출한다. Transmission Remote처럼 **링크 �
 ## 기능
 - 다운로드 목록: 진행바·속도·ETA, 필터(전체/진행중/완료/실패/일시정지)·검색, 카드 **좌 스와이프 삭제 / 우 스와이프 일시정지·재개**, 탭하면 파일 목록·경로 복사·DSM 열기
 - 수집됨(링크그래버): 온라인/오프라인 확인 후 패키지별/전체 시작, 오프라인 제거
-- 추가: 붙여넣기(잡문 섞여도 URL만 추출), 저장 폴더 프리셋 칩, 패키지명, "바로 시작" 옵션
+- 추가: 붙여넣기(잡문 섞여도 URL만 추출), 저장 위치(하위 폴더) 하나, "바로 시작" 옵션
 - 안드로이드 **공유 → JD Remote**(PWA share_target), 홈 화면 설치, 앱 열 때 **클립보드 URL 감지** 배너
+- 계정 탭: 호스터 프리미엄 계정(terabox 등) 목록·추가·아이디/비밀번호 변경·사용 여부·갱신·삭제 (`accountsV2`). 비밀번호는 JD로 전달만, 앱에 저장 안 함
 - 상단: 전역 시작/일시정지, 속도 제한 토글(프리셋), 완료 정리, 60초 속도 스파크라인, **캡차 대기 배너**(noVNC 바로가기), JD 연결 끊김 안내
 - 로그인은 **JD 컨테이너의 기존 계정(noVNC용 webauth)에 위임** — jd-remote는 비밀번호를 저장·관리하지 않음. 세션 30일 유지, 실패 지연·분당 5회 제한
 
@@ -60,4 +61,4 @@ jlesage webauth: `POST /login/login` form `username`/`password`, 요청에 쿠�
 - **POST `/<ns>/<method>` body `{"params":[…]}`만 동작.** GET `?params=`는 INTERNAL_SERVER_ERROR/BAD_PARAMETERS.
 - 성공 `{"data":…}`, 실패 `{"src":"DEVICE","type":"…"}`.
 - `downloadcontroller/getSpeedInBytes` 없음 → 패키지 `speed` 합산.
-- 쓰는 메서드: `downloadcontroller/{getCurrentState,start,stop,pause}`, `downloadsV2/{queryPackages,queryLinks,removeLinks,cleanup,setEnabled,resetLinks,forceDownload}`, `linkgrabberv2/{addLinks,queryLinks,queryPackages,isCollecting,moveToDownloadlist,removeLinks}`, `config/{get,set}`(GeneralSettings.DownloadSpeedLimit*), `captcha/list`.
+- 쓰는 메서드: `downloadcontroller/{getCurrentState,start,stop,pause}`, `downloadsV2/{queryPackages,queryLinks,removeLinks,cleanup,setEnabled,resetLinks,forceDownload}`, `linkgrabberv2/{addLinks,queryLinks,queryPackages,isCollecting,moveToDownloadlist,removeLinks}`, `config/{get,set}`(GeneralSettings.DownloadSpeedLimit*), `captcha/list`, `accountsV2/{listAccounts,listPremiumHoster,addAccount,updateAccount,enableAccounts,disableAccounts,refreshAccounts,removeAccounts}`.

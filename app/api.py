@@ -256,6 +256,73 @@ async def links_retry(ids: Ids, request: Request) -> dict:
     return {"ok": True}
 
 
+# ── 호스터 계정 ───────────────────────────────────────────────────────────
+def _acct_view(a: dict) -> dict:
+    return {
+        "uuid": a.get("uuid"), "hostname": a.get("hostname"), "username": a.get("username") or a.get("userName"),
+        "enabled": a.get("enabled", True), "valid": a.get("valid"), "error": a.get("error"),
+        "validUntil": a.get("validUntil"), "trafficLeft": a.get("trafficLeft"), "trafficMax": a.get("trafficMax"),
+    }
+
+
+@router.get("/accounts")
+async def accounts_list(request: Request) -> list[dict]:
+    return [_acct_view(a) for a in await _guard(_jd(request).accounts())]
+
+
+@router.get("/accounts/hosters")
+async def accounts_hosters(request: Request) -> list[str]:
+    return await _guard(_jd(request).premium_hosters())
+
+
+class AccountIn(BaseModel):
+    hostname: str = Field(..., min_length=3, description="예: terabox.com")
+    username: str = Field(..., min_length=1)
+    password: str = Field(..., min_length=1)
+
+
+@router.post("/accounts")
+async def accounts_add(body: AccountIn, request: Request) -> dict:
+    # 비밀번호는 JD로 그대로 전달만 하고 jd-remote 는 저장/로그하지 않는다.
+    await _guard(_jd(request).add_account(body.hostname.strip().lower(), body.username.strip(), body.password))
+    return {"ok": True}
+
+
+class AccountUpdate(BaseModel):
+    username: str = Field(..., min_length=1)
+    password: str = Field(..., min_length=1)
+
+
+@router.put("/accounts/{uuid}")
+async def accounts_update(uuid: int, body: AccountUpdate, request: Request) -> dict:
+    await _guard(_jd(request).update_account(uuid, body.username.strip(), body.password))
+    return {"ok": True}
+
+
+class AccountIds(BaseModel):
+    ids: list[int]
+
+
+@router.post("/accounts/remove")
+async def accounts_remove(body: AccountIds, request: Request) -> dict:
+    await _guard(_jd(request).remove_accounts(body.ids))
+    return {"removed": len(body.ids)}
+
+
+@router.post("/accounts/{uuid}/{action}")
+async def accounts_toggle(uuid: int, action: str, request: Request) -> dict:
+    jd = _jd(request)
+    if action == "enable":
+        await _guard(jd.set_accounts_enabled(True, [uuid]))
+    elif action == "disable":
+        await _guard(jd.set_accounts_enabled(False, [uuid]))
+    elif action == "refresh":
+        await _guard(jd.refresh_accounts([uuid]))
+    else:
+        raise HTTPException(404, "알 수 없는 동작")
+    return {"ok": True}
+
+
 # ── 전역 컨트롤 / 속도 제한 ─────────────────────────────────────────────────
 @router.post("/control/{action}")
 async def control(action: str, request: Request) -> dict:

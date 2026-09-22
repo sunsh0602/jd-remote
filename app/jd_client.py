@@ -43,6 +43,10 @@ GRABBER_PACKAGE_FIELDS = {
     "bytesTotal": True, "childCount": True, "hosts": True, "saveTo": True,
     "enabled": True, "comment": True,
 }
+ACCOUNT_FIELDS = {
+    "userName": True, "validUntil": True, "trafficLeft": True, "trafficMax": True,
+    "enabled": True, "valid": True, "error": True, "hostname": True,
+}
 GENERAL = "org.jdownloader.settings.GeneralSettings"
 
 
@@ -139,6 +143,28 @@ class JDClient:
 
     async def grabber_remove(self, link_ids: list[int], package_ids: list[int]) -> Any:
         return await self.call("linkgrabberv2/removeLinks", link_ids, package_ids)
+
+    # ── 호스터 계정 (accountsV2) ──────────────────────────────────────────
+    async def accounts(self) -> list[dict]:
+        return await self.call("accountsV2/listAccounts", dict(ACCOUNT_FIELDS)) or []
+
+    async def premium_hosters(self) -> list[str]:
+        return await self.call("accountsV2/listPremiumHoster") or []
+
+    async def add_account(self, hostname: str, username: str, password: str) -> Any:
+        return await self.call("accountsV2/addAccount", hostname, username, password)
+
+    async def update_account(self, account_id: int, username: str, password: str) -> Any:
+        return await self.call("accountsV2/updateAccount", account_id, username, password)
+
+    async def remove_accounts(self, ids: list[int]) -> Any:
+        return await self.call("accountsV2/removeAccounts", ids)
+
+    async def set_accounts_enabled(self, enabled: bool, ids: list[int]) -> Any:
+        return await self.call("accountsV2/enableAccounts" if enabled else "accountsV2/disableAccounts", ids)
+
+    async def refresh_accounts(self, ids: list[int]) -> Any:
+        return await self.call("accountsV2/refreshAccounts", ids)
 
     # ── 설정 / 기타 ───────────────────────────────────────────────────────
     async def speed_limit(self) -> dict:

@@ -74,18 +74,27 @@
         <span class="muted" id="urlCount"></span>
       </div>
       <label class="field">
-        <span>저장 폴더 (선택)</span>
-        <div class="chips" id="folderChips"></div>
-        <input id="addFolder" type="text" placeholder="하위 폴더 이름 (비우면 기본 폴더)">
-        <span class="muted small">저장 위치: Downloads/<input id="addFolder" type="text" placeholder="하위 폴더 이름 (비우면 기본 폴더)">lt;폴더<input id="addFolder" type="text" placeholder="하위 폴더 이름 (비우면 기본 폴더)">gt;/<input id="addFolder" type="text" placeholder="하위 폴더 이름 (비우면 기본 폴더)">lt;패키지 이름<input id="addFolder" type="text" placeholder="하위 폴더 이름 (비우면 기본 폴더)">gt;/ — 패키지 이름을 비우면 JD가 자동으로 정합니다.</span>
-      </label>
-      <label class="field">
-        <span>패키지 이름 (선택)</span>
-        <input id="addPackage" type="text" placeholder="비우면 JD가 자동으로 정함">
+        <span>저장 위치 (선택, 기본 다운로드 폴더 아래 하위 폴더 이름)</span>
+        <input id="addFolder" type="text" placeholder="비우면 기본 다운로드 폴더">
       </label>
       <label class="check"><input type="checkbox" id="addAutostart"> 확인 없이 바로 다운로드 시작</label>
       <button type="submit" class="btn primary wide" id="btnAdd">＋ 링크 추가</button>
       <p class="muted small">기본은 <b>수집됨</b> 탭에 먼저 올라가고, 온라인/오프라인 확인 후 시작합니다.</p>
+    </form>
+  </section>
+
+  <!-- 계정 탭 -->
+  <section id="tab-accounts" class="tab">
+    <div class="filterbar"><span class="muted" id="acctInfo">호스터 계정</span><div class="spacer"></div><button class="btn small" id="btnAcctRefreshAll">↻ 전체 갱신</button></div>
+    <ul class="list" id="acctList"></ul>
+    <p class="empty" id="acctEmpty" hidden>등록된 계정이 없습니다.</p>
+    <form id="acctForm" class="add-form" autocomplete="off">
+      <h3 class="muted small" style="margin:8px 0 0">계정 추가</h3>
+      <label class="field"><span>호스터 (도메인)</span><input id="acctHost" type="text" list="hosterList" placeholder="terabox.com" autocapitalize="off"><datalist id="hosterList"></datalist></label>
+      <label class="field"><span>아이디 / 이메일</span><input id="acctUser" type="text" autocapitalize="off" autocomplete="off"></label>
+      <label class="field"><span>비밀번호</span><input id="acctPass" type="password" autocomplete="new-password"></label>
+      <button type="submit" class="btn primary wide">＋ 계정 추가</button>
+      <p class="muted small">비밀번호는 JD에 그대로 전달만 되고 이 앱에는 저장되지 않습니다.</p>
     </form>
   </section>
 </main>
@@ -94,13 +103,28 @@
   <button class="tab-btn active" data-tab="downloads">⬇<span>다운로드</span><em class="badge" id="badgeDl" hidden></em></button>
   <button class="tab-btn" data-tab="grabber">🧺<span>수집됨</span><em class="badge" id="badgeGrab" hidden></em></button>
   <button class="tab-btn" data-tab="add">＋<span>추가</span></button>
+  <button class="tab-btn" data-tab="accounts">🔑<span>계정</span><em class="badge" id="badgeAcct" hidden></em></button>
 </nav>
+
+<!-- 계정 편집 시트 -->
+<div class="sheet" id="acctSheet" hidden>
+  <div class="sheet-body">
+    <div class="sheet-head"><h2 id="acctSheetTitle">계정</h2><button class="icon-btn" data-close>✕</button></div>
+    <p class="muted small" id="acctSheetInfo"></p>
+    <div class="actions" id="acctSheetActions"></div>
+    <form id="acctEditForm" class="add-form">
+      <h3 class="muted small" style="margin:8px 0 0">아이디/비밀번호 변경</h3>
+      <label class="field"><span>아이디 / 이메일</span><input id="acctEditUser" type="text" autocapitalize="off"></label>
+      <label class="field"><span>새 비밀번호</span><input id="acctEditPass" type="password" autocomplete="new-password" placeholder="변경 시 입력"></label>
+      <button type="submit" class="btn wide">저장</button>
+    </form>
+  </div>
+</div>
 
 <!-- 설정 시트 -->
 <div class="sheet" id="settingsSheet" hidden>
   <div class="sheet-body">
     <div class="sheet-head"><h2>설정</h2><button class="icon-btn" data-close>✕</button></div>
-    <label class="field"><span>폴더 프리셋 (쉼표로 구분)</span><input id="setPresets" type="text" placeholder="게임, APK, 영상"></label>
     <label class="field"><span>갱신 주기 (초)</span><input id="setPoll" type="number" min="1" max="60" step="1"></label>
     <label class="check"><input type="checkbox" id="setClipboard" checked> 앱 열 때 클립보드 URL 감지</label>
     <div class="row">

@@ -50,7 +50,7 @@ def _login(c):
     assert r.status_code == 303
 
 
-def test_lock_flow_end_to_end(monkeypatch):
+def test_expiry_shows_banner_not_logout(monkeypatch):
     import app.api as api_mod
     monkeypatch.setattr(api_mod.asyncio, "sleep", _nosleep)
     acct = {"uuid": 7, "hostname": "terabox.com", "username": "me@x.io", "enabled": True, "valid": True, "error": None}
@@ -58,26 +58,21 @@ def test_lock_flow_end_to_end(monkeypatch):
         app.state.auth = Auth("http://jdweb:5800", "test-secret", transport=_jd_web(_webauth_handler))
         app.state.jd = FakeJD([acct])
         app.state.lock = LockState()
-        _login(c)                       # 정상 상태에서 로그인
-        assert c.get("/api/state").status_code == 200
-        acct["valid"] = False; acct["error"] = "Cookie login failed"   # 이후 쿠키 만료
-        # 만료 감지 → /api/state 423, 페이지는 잠금 로그인 화면
-        r = c.get("/api/state"); assert r.status_code == 423 and r.json()["detail"]["locked"]
-        r = c.get("/", follow_redirects=False); assert r.status_code == 302 and "locked=1" in r.headers["location"]
-        r = c.get("/login"); assert r.status_code == 200 and "TeraBox 쿠키가 만료" in r.text and "hidden" in r.text
-        assert c.get("/api/lock").json()["locked"] is True
-        # 잠금 중 다른 API는 423, 쿠키 갱신은 통과 (확장이 쓰는 헤더 인증으로)
-        assert c.post("/api/cleanup-finished").status_code == 423
-        token = c.cookies.get("jdr_session"); c.cookies.clear()
-        r = c.post("/api/accounts/terabox/cookies", json={"cookies": [{"name": "ndus", "value": "x", "domain": ".terabox.com"}]},
+        _login(c)
+        r = c.get("/api/state"); assert r.status_code == 200 and r.json()["jd"]["accountAlert"] is None
+        # 쿠키 만료 → state 는 여전히 200, accountAlert 로 표시 (로그아웃/423 없음)
+        acct["valid"] = False; acct["error"] = "Cookie login failed"
+        r = c.get("/api/state")
+        assert r.status_code == 200
+        assert r.json()["jd"]["accountAlert"] and "Cookie login failed" in r.json()["jd"]["accountAlert"]
+        # 페이지도 그대로 접근 (리다이렉트 없음)
+        assert c.get("/", follow_redirects=False).status_code == 200
+        # 쿠키 재전송으로 정상화되면 alert 사라짐
+        token = c.cookies.get("jdr_session")
+        r = c.post("/api/accounts/terabox/cookies", json={"cookies": [{"name": "ndus", "value": "x"}], "username": "me@x.io"},
                    headers={"X-JDR-Session": token})
-        assert r.status_code == 200, r.text
-        j = r.json(); assert j["action"] == "updated" and j["locked"] is False and j["account"]["valid"] is True
-        assert app.state.jd.calls[0][:3] == ("update", 7, "me@x.io") and '"ndus"' in app.state.jd.calls[0][3]
-        # 잠금 해제 후 정상
-        c.cookies.set("jdr_session", token)
-        assert c.get("/api/state").status_code == 200
-        assert c.get("/api/lock").json()["locked"] is False
+        assert r.status_code == 200 and r.json()["action"] == "updated"
+        assert c.get("/api/state").json()["jd"]["accountAlert"] is None
 
 
 def test_cookie_push_rejects_without_login_cookie(monkeypatch):

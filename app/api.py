@@ -132,8 +132,6 @@ async def state(request: Request) -> dict[str, Any]:
         )
         lock: LockState = request.app.state.lock
         lock.update_from_accounts(accts)
-        if lock.locked:
-            raise HTTPException(423, {"locked": True, "reason": lock.reason})
     except JDUnavailable as e:
         return {"ts": time.time(), "jd": {"connected": False, "error": str(e),
                 "hint": "docker network connect jdnet jdownloader2"}, "packages": [], "linkgrabber": None}
@@ -146,7 +144,8 @@ async def state(request: Request) -> dict[str, Any]:
         "ts": time.time(),
         "jd": {"connected": True, "state": st, "speed": speed, "speedlimit": limit,
                "captchas": len(caps), "novncUrl": s.novnc_url, "dsmUrl": s.dsm_url,
-               "downloadRoot": s.download_root, "pollMs": s.poll_ms},
+               "downloadRoot": s.download_root, "pollMs": s.poll_ms,
+               "accountAlert": lock.reason if lock.locked else None},
         "packages": views,
         "linkgrabber": {
             "collecting": collecting,

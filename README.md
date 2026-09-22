@@ -14,11 +14,11 @@ JD 로컬 RemoteAPI(3128)를 호출한다. Transmission Remote처럼 **링크 �
 - 상단: 전역 시작/일시정지, 속도 제한 토글(프리셋), 완료 정리, 60초 속도 스파크라인, **캡차 대기 배너**(noVNC 바로가기), JD 연결 끊김 안내
 - 로그인은 **JD 컨테이너의 기존 계정(noVNC용 webauth)에 위임** — jd-remote는 비밀번호를 저장·관리하지 않음. 세션 30일 유지, 실패 지연·분당 5회 제한
 
-## TeraBox 쿠키 만료 → 잠금 → 확장으로 갱신
-- JD의 TeraBox 계정(`accountsV2`)이 `valid=false` 또는 `error`면 jd-remote는 **잠금**: 모든 `/api/*`는 423, 화면은 로그인 페이지에 "TeraBox 쿠키가 만료되어 로그아웃되었습니다" 안내(로그인 폼 숨김). 세션 쿠키 자체는 유지해서 확장이 갱신 API를 인증할 수 있게 한다.
+## TeraBox 쿠키 만료 → 배너 표시 → 확장으로 갱신
+- JD의 TeraBox 계정(`accountsV2`)이 `valid=false` 또는 `error`면 jd-remote는 로그아웃시키지 않고 상단에 **경고 배너**만 띄운다(`/api/state`의 `jd.accountAlert`). 앱은 계속 정상 사용 가능.
+- 배너의 "계정 탭" 버튼 → 계정 탭에서 쿠키를 갱신한다.
 - JD terabox 플러그인은 아이디 칸이 **이메일 형식**이 아니면 `AccountInvalidException: Please enter a valid e-mail address` 로 거부한다. 확장·서버 모두 이메일을 필수로 검증.
-- 갱신: `extension/`의 크롬 확장(**JD Remote 쿠키 도우미**) — 팝업이 TeraBox/JD Remote 로그인 상태를 ✓/✗로 보여주고 바로가기 버튼 제공, terabox.com 로그인 시 **자동 전송**(기본 켜짐, 알림). 수동은 아이콘 클릭 → 쿠키를 `POST /api/accounts/terabox/cookies`로 전송(`X-JDR-Session` 헤더 인증) → JD `setUserNameAndPassword` → 잠금 자동 해제, 로그인 화면이 5초 폴링(`/api/lock`)으로 앱에 복귀. 설치/사용법은 [extension/README.md](extension/README.md).
-- 잠금 중에도 `/api/accounts/terabox/cookies`와 공개 `/api/lock`만 동작한다.
+- 갱신: `extension/`의 크롬 확장(**JD Remote 쿠키 도우미**) — 팝업이 TeraBox/JD Remote 로그인 상태를 ✓/✗로 보여주고 바로가기 버튼 제공, terabox.com 로그인 시 **자동 전송**(기본 켜짐, 알림). 수동은 아이콘 클릭 → 쿠키를 `POST /api/accounts/terabox/cookies`로 전송(`X-JDR-Session` 헤더 인증) → JD `setUserNameAndPassword` → 배너 사라짐. 설치/사용법은 [extension/README.md](extension/README.md).
 
 ## 구성
 ```

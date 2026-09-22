@@ -31,7 +31,6 @@
   async function api(path, opts = {}) {
     const r = await fetch('/api' + path, { headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', ...opts, body: opts.body ? JSON.stringify(opts.body) : undefined });
     if (r.status === 401) { location.href = '/login?next=' + encodeURIComponent(location.pathname + location.search); throw new Error('401'); }
-    if (r.status === 423) { location.href = '/login?locked=1'; throw new Error('401'); } // TeraBox 쿠키 만료 → 잠금(로그아웃 화면)
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(j.detail || r.statusText);
     return j;
@@ -75,6 +74,7 @@
     const b = [];
     if (!jd.connected) b.push({ k: 'bad', t: 'JDownloader에 연결할 수 없습니다. ' + (jd.hint ? 'NAS에서: ' + jd.hint : ''), a: null });
     if (jd.captchas > 0) b.push({ k: 'warn', t: `캡차 ${jd.captchas}개가 입력을 기다립니다`, a: { href: jd.novncUrl, label: 'JD 화면 열기' } });
+    if (jd.accountAlert) b.push({ k: 'bad', t: jd.accountAlert + ' — 계정 탭에서 쿠키를 갱신하세요', a: { onclick: () => showTab('accounts'), label: '계정 탭' } });
     if (d.linkgrabber && d.linkgrabber.collecting) b.push({ k: 'info', t: '링크를 확인하는 중…', a: null });
     const failed = (d.packages || []).filter((p) => p.kind === 'failed').length;
     if (failed) b.push({ k: 'warn', t: `실패한 패키지 ${failed}개`, a: { onclick: () => { setFilter('failed'); showTab('downloads'); }, label: '보기' } });

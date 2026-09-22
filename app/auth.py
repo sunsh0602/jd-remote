@@ -110,17 +110,11 @@ def require_api_auth(request: Request) -> None:
     auth: Auth = request.app.state.auth
     if not auth.is_authed(request):
         raise HTTPException(401, "로그인이 필요합니다.")
-    lock = getattr(request.app.state, "lock", None)
-    if lock and lock.locked and not request.url.path.startswith("/api/accounts/terabox/cookies"):
-        raise HTTPException(423, {"locked": True, "reason": lock.reason})
 
 
 def page_redirect_if_anon(request: Request) -> RedirectResponse | None:
     auth: Auth = request.app.state.auth
-    lock = getattr(request.app.state, "lock", None)
     if auth.is_authed(request):
-        if lock and lock.locked:
-            return RedirectResponse("/login?locked=1", status_code=302)
         return None
     nxt = request.url.path
     if request.url.query:

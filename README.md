@@ -20,6 +20,10 @@ JD 로컬 RemoteAPI(3128)를 호출한다. Transmission Remote처럼 **링크 �
 - JD terabox 플러그인은 아이디 칸이 **이메일 형식**이 아니면 `AccountInvalidException: Please enter a valid e-mail address` 로 거부한다. 확장·서버 모두 이메일을 필수로 검증.
 - 갱신: `extension/`의 크롬 확장(**JD Remote 쿠키 도우미**) — 팝업이 TeraBox/JD Remote 로그인 상태를 ✓/✗로 보여주고 바로가기 버튼 제공, terabox.com 로그인 시 **자동 전송**(기본 켜짐, 알림). 수동은 아이콘 클릭 → 쿠키를 `POST /api/accounts/terabox/cookies`로 전송(`X-JDR-Session` 헤더 인증) → JD `setUserNameAndPassword` → 배너 사라짐. 설치/사용법은 [extension/README.md](extension/README.md).
 
+## 폰에서 쿠키 갱신 — NAS 크롬 ([browser/](browser/README.md))
+TeraBox 로그인 쿠키(`ndus`)는 HttpOnly 라 폰 브라우저에서는 꺼낼 수 없다. 대신 NAS 에 데스크톱 크로미움을 띄우고
+폰 브라우저로 그 화면에 접속해 terabox.com 을 열면, 마운트된 확장이 쿠키를 jd-remote 로 자동 전송한다. 안드로이드·아이폰 공통.
+
 ## 구성
 ```
 폰 ─https─▶ DSM 리버스 프록시(jdr.<your-domain>:443) ─▶ http://127.0.0.1:5810 (이 앱)

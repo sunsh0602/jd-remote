@@ -1,0 +1,30 @@
+# 폰에서 TeraBox 쿠키를 갱신하기 위한 "NAS 안의 데스크톱 크롬".
+# 폰 브라우저로 접속하면 이 크로미움 화면이 그대로 뜬다. 여기서 terabox.com 에 로그인해 두고
+# jd-remote 확장(../extension)을 올려 두면, 이후에는 페이지를 여는 것만으로 쿠키가 jd-remote 로 전송된다.
+#
+#   폰 ─https─▶ DSM 리버스 프록시(browser.<your-domain>) ─▶ 127.0.0.1:5820 (이 컨테이너, 기본 인증)
+#
+# 사용: cp .env.example .env && vi .env && docker compose up -d
+services:
+  jdr-browser:
+    image: lscr.io/linuxserver/chromium:latest
+    container_name: jdr-browser
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # 시작 시 TeraBox 를 열고, 마운트한 jd-remote 확장을 로드한다.
+      # (--load-extension 이 막힌 빌드면 chrome://extensions → 개발자 모드 → '압축해제된 확장 프로그램 로드' 로 /extension 을 한 번 올리면 된다. /config 에 남는다.)
+      CHROME_CLI: "--load-extension=/extension https://www.terabox.com/"
+    ports:
+      - "127.0.0.1:5820:3000"   # DSM 리버스 프록시만 진입점. 절대 외부에 직접 열지 않는다(로그인된 브라우저다).
+    volumes:
+      - jdr-browser-config:/config          # 크롬 프로필(TeraBox 로그인 상태, 확장 설정) 영속
+      - ../extension:/extension:ro          # jd-remote 쿠키 도우미 확장 (저장소의 extension/ 그대로)
+    shm_size: "1gb"                          # 크로미움 권장
+    security_opt:
+      - seccomp:unconfined                   # linuxserver 크로미움 이미지 권장 (샌드박스 동작용)
+    logging:
+      driver: json-file
+      options: { max-size: "5m", max-file: "3" }
+volumes:
+  jdr-browser-config:

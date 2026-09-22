@@ -2,10 +2,28 @@
 # 폰 브라우저로 접속하면 이 크로미움 화면이 그대로 뜬다. 여기서 terabox.com 에 로그인해 두고
 # jd-remote 확장(../extension)을 올려 두면, 이후에는 페이지를 여는 것만으로 쿠키가 jd-remote 로 전송된다.
 #
-#   폰 ─https─▶ DSM 리버스 프록시(browser.<your-domain>) ─▶ 127.0.0.1:5820 (이 컨테이너, 기본 인증)
+#   폰 ─https─▶ DSM 리버스 프록시(browser.<your-domain>) ─▶ 127.0.0.1:5820 auth(nginx) ─▶ jdr-browser:3000
+#
+# 인증: 자체 비밀번호 없음. auth 컨테이너가 jdownloader2 의 webauth-htpasswd 를 그대로 읽는다
+#       → jdownloader2 웹UI 에 로그인되는 계정이면 여기도 들어온다 (jd-remote 와 같은 기준).
 #
 # 사용: cp .env.example .env && vi .env && docker compose up -d
 services:
+  auth:
+    image: nginx:alpine
+    container_name: jdr-browser-auth
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5820:80"     # DSM 리버스 프록시만 진입점. 절대 외부에 직접 열지 않는다(로그인된 브라우저다).
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/10-htpasswd.sh:/docker-entrypoint.d/10-htpasswd.sh:ro
+      - ${JD_WEBAUTH_HTPASSWD}:/jd-htpasswd:ro   # jdownloader2 컨테이너의 /config/webauth-htpasswd (호스트 경로, .env)
+    depends_on: [jdr-browser]
+    logging:
+      driver: json-file
+      options: { max-size: "5m", max-file: "3" }
+
   jdr-browser:
     image: lscr.io/linuxserver/chromium:latest
     container_name: jdr-browser
@@ -15,8 +33,7 @@ services:
       # 시작 시 TeraBox 를 열고, 마운트한 jd-remote 확장을 로드한다.
       # (--load-extension 이 막힌 빌드면 chrome://extensions → 개발자 모드 → '압축해제된 확장 프로그램 로드' 로 /extension 을 한 번 올리면 된다. /config 에 남는다.)
       CHROME_CLI: "--load-extension=/extension https://www.terabox.com/"
-    ports:
-      - "127.0.0.1:5820:3000"   # DSM 리버스 프록시만 진입점. 절대 외부에 직접 열지 않는다(로그인된 브라우저다).
+    # 호스트 포트 없음: auth 를 거쳐서만 닿는다.
     volumes:
       - jdr-browser-config:/config          # 크롬 프로필(TeraBox 로그인 상태, 확장 설정) 영속
       - ../extension:/extension:ro          # jd-remote 쿠키 도우미 확장 (저장소의 extension/ 그대로)

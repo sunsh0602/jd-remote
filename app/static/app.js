@@ -262,7 +262,6 @@
     $('#acctEditUser').value = a.username || ''; $('#acctEditPass').value = ''; $('#acctEditCookie').value = ''; setCookieMode(isCookieHoster(a.hostname), 'acctEdit', isCookieHoster(a.hostname));
     const A = [
       [a.enabled ? '⏸ 사용 안 함' : '▶ 사용', () => api(`/accounts/${a.uuid}/${a.enabled ? 'disable' : 'enable'}`, { method: 'POST' })],
-      ['↻ 상태 갱신', () => api(`/accounts/${a.uuid}/refresh`, { method: 'POST' })],
       ['🗑 계정 삭제', async () => { if (!confirm(`${a.hostname} (${a.username}) 계정을 삭제할까요?`)) throw new Error('취소'); return api('/accounts/remove', { method: 'POST', body: { ids: [a.uuid] } }); }, true],
     ];
     $('#acctSheetActions').innerHTML = A.map(([l, , d], i) => `<button class="btn ${d ? 'danger' : ''}" data-i="${i}">${l}</button>`).join('');
@@ -294,7 +293,6 @@
     const r = await act('계정 추가', () => api('/accounts', { method: 'POST', body }));
     if (r) { $('#acctUser').value = ''; $('#acctPass').value = ''; $('#acctCookie').value = ''; onHostInput({ target: $('#acctHost') }); setTimeout(loadAccounts, 1500); toast('JD가 계정을 확인하는 중 — 잠시 후 상태를 확인하세요'); }
   });
-  $('#btnAcctRefreshAll').addEventListener('click', async () => { for (const a of accounts) { try { await api(`/accounts/${a.uuid}/refresh`, { method: 'POST' }); } catch (e) {} } toast('갱신 요청'); setTimeout(loadAccounts, 2000); });
 
   // ── 상단 버튼 ─────────────────────────────────────────────────────────
   $('#btnToggleRun').addEventListener('click', (e) => { const s = e.currentTarget.dataset.state; if (!s) return; act({ pause: '일시정지', resume: '재개', start: '시작' }[s], () => api('/control/' + s, { method: 'POST' })); });

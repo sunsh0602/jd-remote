@@ -85,7 +85,7 @@
 
   <!-- 계정 탭 -->
   <section id="tab-accounts" class="tab">
-    <div class="filterbar"><span class="muted" id="acctInfo">호스터 계정</span><div class="spacer"></div><button class="btn small" id="btnAcctRefreshAll">↻ 전체 갱신</button></div>
+    <div class="filterbar"><span class="muted" id="acctInfo">호스터 계정</span></div>
     <ul class="list" id="acctList"></ul>
     <p class="empty" id="acctEmpty" hidden>등록된 계정이 없습니다.</p>
     <form id="acctForm" class="add-form" autocomplete="off">
@@ -97,9 +97,9 @@
       </label>
       <label class="field"><span>계정 이메일</span><input id="acctUser" type="text" inputmode="email" autocapitalize="off" autocomplete="off" placeholder="me@example.com"></label>
       <label class="check"><input type="checkbox" id="acctCookieMode"> 쿠키로 로그인 (비밀번호 대신 브라우저 쿠키 붙여넣기)</label>
-      <p class="note" id="acctCookieNote" hidden><b>TeraBox는 쿠키 로그인만 됩니다.</b><br>PC 크롬에서 terabox.com 로그인 → "JD Remote 쿠키 도우미" 확장 아이콘을 누르면 자동으로 등록됩니다. 수동으로 하려면 쿠키 내보내기(Cookie-Editor 등) 내용을 아래에 붙여넣으세요. 이메일은 TeraBox 로그인 이메일을 그대로.</p>
+      <p class="note" id="acctCookieNote" hidden><b>TeraBox는 쿠키 로그인만 됩니다.</b><br>PC 크롬에서 terabox.com 로그인 → "JD Remote 쿠키 도우미" 확장 아이콘을 누르면 자동으로 등록됩니다.<br>수동으로 하려면 EditThisCookie (V3) 등으로 내보낸 쿠키를 아래에 붙여넣으세요.<br>이메일은 TeraBox 로그인 이메일을 그대로.</p>
       <label class="field" id="acctPassField"><span>비밀번호</span><input id="acctPass" type="password" autocomplete="new-password"></label>
-      <label class="field" id="acctCookieField" hidden><span>쿠키 (수동 입력 시)</span><textarea id="acctCookie" rows="4" placeholder="쿠키 내보내기 내용 붙여넣기 — JSON 배열 또는 cookies.txt 형식"></textarea></label>
+      <label class="field" id="acctCookieField" hidden><span>쿠키 (수동 입력 시)</span><textarea id="acctCookie" rows="4" placeholder="EditThisCookie (V3) 등으로 내보낸 쿠키 붙여넣기 — JSON 배열 또는 cookies.txt 형식"></textarea></label>
       <button type="submit" class="btn primary wide">＋ 계정 추가</button>
       <p class="muted small">비밀번호/쿠키는 JD에 그대로 전달만 되고 이 앱에는 저장되지 않습니다.</p>
     </form>

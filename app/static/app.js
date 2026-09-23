@@ -317,14 +317,14 @@
   $('#spApply').addEventListener('click', () => { const mb = parseFloat($('#spValue').value); closeSheets(); act('속도 제한 적용', () => api('/speedlimit', { method: 'PUT', body: { enabled: $('#spEnabled').checked, limit: mb > 0 ? Math.round(mb * 1048576) : null } })); });
 
   // ── 설정 시트 ─────────────────────────────────────────────────────────
-  // 상단 🌐: 사용자가 설정에 넣은 주소가 우선, 없으면 서버(.env BROWSER_URL) 기본값, 둘 다 없으면 숨김
+  // 설정의 '쿠키 갱신 접속' 버튼: 사용자가 설정에 넣은 주소가 우선, 없으면 서버(.env BROWSER_URL) 기본값, 둘 다 없으면 숨김
   function effectiveBrowserUrl() { return state.browserUrl || state.serverBrowserUrl || ''; }
   function applyBrowserLink() { const u = effectiveBrowserUrl(); $('#linkBrowser').hidden = !u; if (u) $('#linkBrowser').href = u; }
   function validUrl(v) { try { const u = new URL(v); return /^https?:$/.test(u.protocol) ? u.href : ''; } catch (e) { return ''; } }
   $('#settingsBtn').addEventListener('click', () => {
     $('#setPoll').value = Math.round(state.pollMs / 1000); $('#setClipboard').checked = state.clipboard;
     $('#setBrowserUrl').value = state.browserUrl;
-    $('#setBrowserHint').textContent = state.serverBrowserUrl ? `비우면 서버 기본값 사용: ${state.serverBrowserUrl}` : '서버 기본값이 없습니다. 주소를 넣으면 상단에 🌐 아이콘이 생깁니다.';
+    $('#setBrowserHint').textContent = state.serverBrowserUrl ? `비우면 서버 기본값 사용: ${state.serverBrowserUrl}` : '서버 기본값이 없습니다. 주소를 넣으면 위에 쿠키 갱신 접속 버튼이 생깁니다.';
     $('#settingsSheet').hidden = false;
   });
   $('#setBrowserForm').addEventListener('submit', (e) => {
@@ -332,7 +332,7 @@
     const el = $('#setBrowserUrl'), raw = el.value.trim();
     if (raw && !validUrl(raw)) { toast('http:// 또는 https:// 로 시작하는 주소를 넣어 주세요', true); return; }
     state.browserUrl = raw ? validUrl(raw) : ''; LS.set('browserUrl', state.browserUrl); el.value = state.browserUrl; applyBrowserLink();
-    toast(state.browserUrl ? '🌐 주소 저장됨' : '🌐 주소 비움 (서버 기본값 사용)');
+    toast(state.browserUrl ? '쿠키 갱신 접속 주소 저장됨' : '주소 비움 (서버 기본값 사용)');
   });
   $('#setPoll').addEventListener('change', (e) => { state.pollMs = Math.max(1, Math.min(60, +e.target.value || 3)) * 1000; LS.set('pollMs', state.pollMs); schedule(); });
   $('#setClipboard').addEventListener('change', (e) => { state.clipboard = e.target.checked; LS.set('clipboard', state.clipboard); });

@@ -21,7 +21,6 @@
       <canvas id="spark" width="120" height="28" aria-hidden="true"></canvas>
       <span id="speedText">—</span>
     </div>
-    <a class="icon-btn" id="linkBrowser" hidden target="_blank" rel="noopener" aria-label="쿠키 갱신 크롬 열기" title="TeraBox 쿠키 갱신 크롬 (NAS)">🌐</a>
     <button class="icon-btn" id="settingsBtn" aria-label="설정">⚙</button>
   </div>
   <div class="top-row controls">
@@ -139,9 +138,9 @@
     <div class="sheet-head"><h2>설정</h2><button class="icon-btn" data-close>✕</button></div>
     <label class="field"><span>갱신 주기 (초)</span><input id="setPoll" type="number" min="1" max="60" step="1"></label>
     <label class="check"><input type="checkbox" id="setClipboard" checked> 앱 열 때 클립보드 URL 감지</label>
-    <form class="field" id="setBrowserForm" autocomplete="off"><span>쿠키 갱신 크롬 주소 (상단 🌐 아이콘)</span>
+    <form class="field" id="setBrowserForm" autocomplete="off"><span>쿠키 갱신 접속 주소</span>
       <div class="row">
-        <input id="setBrowserUrl" type="url" inputmode="url" autocapitalize="off" placeholder="https://… (비우면 서버 기본값)" style="flex:1;min-width:0">
+        <input id="setBrowserUrl" type="url" inputmode="url" autocapitalize="off" placeholder="https://… (비우면 서버 기본값, 없으면 버튼 숨김)" style="flex:1;min-width:0">
         <button type="submit" class="btn small primary" id="setBrowserSave">저장</button>
       </div>
       <p class="muted small" id="setBrowserHint"></p>
@@ -149,6 +148,7 @@
     <div class="row">
       <a class="btn small" id="linkNovnc" href="#" target="_blank" rel="noopener">🖥 JDownloader2(noVNC) 접속</a>
       <a class="btn small" id="linkDsm" href="#" target="_blank" rel="noopener">🗂 DSM 접속</a>
+      <a class="btn small" id="linkBrowser" href="#" target="_blank" rel="noopener" hidden>🍪 쿠키 갱신 접속</a>
     </div>
     <p class="muted small" id="dlRootText"></p>
     <form method="post" action="/logout"><button class="btn danger wide" type="submit">로그아웃</button></form>

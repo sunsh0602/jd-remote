@@ -319,7 +319,11 @@
   const LINKS = { novncUrl: '#linkNovnc', browserUrl: '#linkBrowser' };
   function effectiveUrl(k) { return state[k] || state.server[k] || ''; }
   function applyLinks() {
-    for (const k in LINKS) { const a = $(LINKS[k]), u = effectiveUrl(k); a.classList.toggle('unset', !u); a.href = u || '#'; if (u) a.target = '_blank'; else a.removeAttribute('target'); }
+    for (const k in LINKS) {
+      const a = $(LINKS[k]), u = effectiveUrl(k), st = $('.link-state', a);
+      a.classList.toggle('unset', !u); a.classList.toggle('set', !!u); a.href = u || '#'; if (u) a.target = '_blank'; else a.removeAttribute('target');
+      if (st) { st.textContent = u ? '설정됨' : '미설정'; }
+    }
   }
   for (const k in LINKS) $(LINKS[k]).addEventListener('click', (e) => { if (!effectiveUrl(k)) { e.preventDefault(); toast(`${$(LINKS[k]).dataset.name} 주소가 지정되지 않았습니다. 고급(바로가기 주소 설정)에서 입력하세요.`, true); } });
   function validUrl(v) { try { const u = new URL(v); return /^https?:$/.test(u.protocol) ? u.href : ''; } catch (e) { return ''; } }

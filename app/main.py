@@ -39,6 +39,16 @@ app.add_middleware(CORSMiddleware, allow_origin_regex=r"^(chrome|moz|edge)-exten
 app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
 
+@app.middleware("http")
+async def _no_stale_static(request: Request, call_next):
+    """정적 파일은 매번 재검증(ETag)하게 한다. Cache-Control 이 없으면 브라우저가 휴리스틱으로 며칠씩 옛 파일을 써서
+    배포 직후 화면이 반쯤만 바뀌는 문제가 생긴다. index.html 의 ?v= 쿼리와 함께 이중 안전장치."""
+    resp = await call_next(request)
+    if request.url.path.startswith("/static/") or resp.headers.get("content-type", "").startswith("text/html"):
+        resp.headers["Cache-Control"] = "no-cache"
+    return resp
+
+
 def _secure(request: Request) -> bool:
     # DSM 리버스 프록시가 X-Forwarded-Proto 를 넘긴다. uvicorn --proxy-headers 로 request.url.scheme 도 https.
     return request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https"

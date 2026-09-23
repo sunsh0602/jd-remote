@@ -171,13 +171,13 @@
     } catch (e) { $('#pkgSheetLinks').innerHTML = `<li class="muted small">불러오기 실패: ${esc(e.message)}</li>`; }
   }
 
-  // ── 렌더: 확인 대기(JD 링크그래버) ───────────────────────────────────
+  // ── 렌더: 장바구니(JD 링크그래버) ─────────────────────────────────────
   function renderGrabber() {
     const g = (state.data || {}).linkgrabber; const ul = $('#grabList');
     if (!g) { ul.innerHTML = ''; $('#grabEmpty').hidden = false; $('#badgeGrab').hidden = true; return; }
     const links = g.links || [];
     $('#badgeGrab').hidden = links.length === 0; $('#badgeGrab').textContent = links.length;
-    $('#grabberInfo').textContent = links.length ? `${links.length}개 링크 · ${fmtBytes(links.reduce((a, l) => a + (l.bytesTotal || 0), 0))}` : '확인 대기 중인 링크';
+    $('#grabberInfo').textContent = links.length ? `장바구니 ${links.length}개 · ${fmtBytes(links.reduce((a, l) => a + (l.bytesTotal || 0), 0))}` : '장바구니 · 확인 후 시작하세요';
     const byPkg = new Map();
     links.forEach((l) => { const k = l.packageUUID; if (!byPkg.has(k)) byPkg.set(k, []); byPkg.get(k).push(l); });
     const pkgs = new Map((g.packages || []).map((p) => [p.uuid, p]));

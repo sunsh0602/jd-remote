@@ -170,17 +170,19 @@
     state.openPkg = p.uuid;
     $('#pkgSheetTitle').textContent = p.name;
     $('#pkgSheetPath').textContent = p.path || '';
+    // 1행: 상태를 바꾸는 동작(일시정지/재개, 재시도)  ·  2행: 지우는 동작(목록에서 제거, 파일까지 삭제)
     const A = [];
     if (!removeMode) {
       A.push(p.enabled ? ['⏸ 일시정지', () => api(`/packages/${p.uuid}/pause`, { method: 'POST' })] : ['▶ 재개', () => api(`/packages/${p.uuid}/resume`, { method: 'POST' })]);
-      if (p.kind === 'failed' || p.kind === 'paused') A.push(['🔁 재시도', () => api('/links/retry', { method: 'POST', body: { packageIds: [p.uuid] } })]);
-      if (p.path) A.push(['📋 경로 복사', async () => { await navigator.clipboard.writeText(p.path); }]);
-      if (state.data.jd.dsmUrl) A.push(['🗂 DSM(File Station) 접속', async () => { window.open(state.data.jd.dsmUrl + '/?launchApp=SYNO.SDS.App.FileStation3.Instance', '_blank'); }]);
+      if (p.kind === 'failed' || p.kind === 'paused' || p.kind === 'action') A.push(['🔁 재시도', () => api('/links/retry', { method: 'POST', body: { packageIds: [p.uuid] } })]);
     }
     A.push(['🗑 목록에서 제거', () => api('/packages/remove', { method: 'POST', body: { packageIds: [p.uuid], deleteFiles: false } }), true]);
     A.push(['❌ 파일까지 삭제', async () => { if (!confirm(`"${p.name}"\n파일까지 완전히 삭제할까요?`)) throw new Error('취소'); return api('/packages/remove', { method: 'POST', body: { packageIds: [p.uuid], deleteFiles: true } }); }, true]);
-    $('#pkgSheetActions').innerHTML = A.map(([l, , danger], i) => `<button class="btn ${danger ? 'danger' : ''}" data-i="${i}">${l}</button>`).join('');
-    $$('#pkgSheetActions .btn').forEach((b) => b.addEventListener('click', async () => { const [l, fn] = A[+b.dataset.i]; closeSheets(); await act(l, fn); }));
+    const btn = ([l, , danger], i) => `<button class="btn ${danger ? 'danger' : ''}${!danger && A.filter((x) => !x[2]).length === 1 ? ' span2' : ''}" data-i="${i}">${l}</button>`;
+    $('#pkgSheetActions').innerHTML = A.map((a, i) => a[2] ? '' : btn(a, i)).join('');
+    $('#pkgSheetDanger').innerHTML = A.map((a, i) => a[2] ? btn(a, i) : '').join('');
+    $('#pkgSheetDanger').hidden = !A.some((a) => a[2]);
+    $$('#pkgSheetActions .btn, #pkgSheetDanger .btn').forEach((b) => b.addEventListener('click', async () => { const [l, fn] = A[+b.dataset.i]; closeSheets(); await act(l, fn); }));
     $('#pkgSheetLinks').innerHTML = '<li class="muted small">파일 목록 불러오는 중…</li>';
     $('#pkgSheet').hidden = false;
     try {

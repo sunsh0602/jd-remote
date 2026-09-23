@@ -327,10 +327,11 @@
     $('#setBrowserHint').textContent = state.serverBrowserUrl ? `비우면 서버 기본값 사용: ${state.serverBrowserUrl}` : '서버 기본값이 없습니다. 주소를 넣으면 상단에 🌐 아이콘이 생깁니다.';
     $('#settingsSheet').hidden = false;
   });
-  $('#setBrowserUrl').addEventListener('change', (e) => {
-    const raw = e.target.value.trim();
-    if (raw && !validUrl(raw)) { toast('http:// 또는 https:// 로 시작하는 주소를 넣어 주세요', true); e.target.value = state.browserUrl; return; }
-    state.browserUrl = raw ? validUrl(raw) : ''; LS.set('browserUrl', state.browserUrl); e.target.value = state.browserUrl; applyBrowserLink();
+  $('#setBrowserForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const el = $('#setBrowserUrl'), raw = el.value.trim();
+    if (raw && !validUrl(raw)) { toast('http:// 또는 https:// 로 시작하는 주소를 넣어 주세요', true); return; }
+    state.browserUrl = raw ? validUrl(raw) : ''; LS.set('browserUrl', state.browserUrl); el.value = state.browserUrl; applyBrowserLink();
     toast(state.browserUrl ? '🌐 주소 저장됨' : '🌐 주소 비움 (서버 기본값 사용)');
   });
   $('#setPoll').addEventListener('change', (e) => { state.pollMs = Math.max(1, Math.min(60, +e.target.value || 3)) * 1000; LS.set('pollMs', state.pollMs); schedule(); });

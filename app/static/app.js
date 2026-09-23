@@ -220,7 +220,7 @@
 
   // ── 추가 탭 ───────────────────────────────────────────────────────────
   const addText = $('#addText');
-  const updateCount = () => { const n = extractUrls(addText.value).length; $('#urlCount').textContent = n ? `URL ${n}개` : ''; $('#btnAdd').disabled = !n; };
+  const updateCount = () => { const n = extractUrls(addText.value).length; $('#urlCount').textContent = n ? `URL ${n}개` : ''; $('#btnAddCart').disabled = $('#btnAddNow').disabled = !n; };
   addText.addEventListener('input', updateCount);
   $('#btnClearText').addEventListener('click', () => { addText.value = ''; updateCount(); });
   $('#btnPaste').addEventListener('click', async () => { try { const t = await navigator.clipboard.readText(); if (!extractUrls(t).length) return toast('클립보드에 URL이 없습니다', true); addText.value = (addText.value ? addText.value + '\n' : '') + t; updateCount(); } catch (e) { toast('클립보드를 읽을 수 없습니다 (권한)', true); } });
@@ -230,14 +230,16 @@
     state.downloadRoot = root;
     if (!el.value || el.value === prev) el.value = root;
   }
-  $('#addAutostart').checked = LS.get('autostart', false);
-  $('#addAutostart').addEventListener('change', (e) => LS.set('autostart', e.target.checked));
-  $('#addForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const body = { text: addText.value, destFolder: $('#addFolder').value.trim() || null, autostart: $('#addAutostart').checked };
+  // 장바구니에 담기 / 즉시 다운로드 — 버튼이 곧 선택. Enter(폼 submit)는 안전한 쪽(장바구니)으로.
+  async function addLinks(autostart) {
+    if (!extractUrls(addText.value).length) return;
+    const body = { text: addText.value, destFolder: $('#addFolder').value.trim() || null, autostart };
     const r = await act('링크 추가', () => api('/links', { method: 'POST', body }));
-    if (r) { addText.value = ''; $('#addFolder').value = state.downloadRoot; updateCount(); showTab(body.autostart ? 'downloads' : 'grabber'); }
-  });
+    if (r) { addText.value = ''; $('#addFolder').value = state.downloadRoot; updateCount(); showTab(autostart ? 'downloads' : 'grabber'); }
+  }
+  $('#btnAddCart').addEventListener('click', () => addLinks(false));
+  $('#btnAddNow').addEventListener('click', () => addLinks(true));
+  $('#addForm').addEventListener('submit', (e) => { e.preventDefault(); addLinks(false); });
   // share_target / ?add= 진입
   const params = new URLSearchParams(location.search);
   if (params.get('add')) { addText.value = params.get('add'); updateCount(); showTab('add'); history.replaceState(null, '', '/'); toast('공유된 링크를 확인 후 추가하세요'); }

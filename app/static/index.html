@@ -11,7 +11,7 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/static/icons/icon-192.png">
 <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
-<link rel="stylesheet" href="/static/style.css?v=20">
+<link rel="stylesheet" href="/static/style.css?v=21">
 </head>
 <body>
 <header class="top">
@@ -80,9 +80,12 @@
         <span>저장 위치 (기본 다운로드 폴더. 뒤에 하위 폴더를 붙일 수 있습니다)</span>
         <input id="addFolder" type="text" placeholder="비우면 기본 다운로드 폴더">
       </label>
-      <label class="check"><input type="checkbox" id="addAutostart"> 링크 검증 없이 즉시 다운로드</label>
-      <button type="submit" class="btn primary wide" id="btnAdd">＋ 링크 추가</button>
-      <p class="muted small">추가한 링크는 <b>장바구니</b>에 담겨 유효성(온라인 여부)이 검증됩니다. 결과를 보고 원하는 항목만 시작하세요. 위 옵션을 켜면 이 단계를 건너뛰고 다운로드 목록에 바로 추가됩니다.</p>
+      <!-- 두 가지 추가 방식을 버튼으로 바로 고른다(체크박스·팝업 없이 한 번의 탭) -->
+      <div class="add-actions">
+        <button type="button" class="btn primary" id="btnAddCart" data-mode="cart">🧺 장바구니에 담기</button>
+        <button type="button" class="btn" id="btnAddNow" data-mode="now">⚡ 즉시 다운로드</button>
+      </div>
+      <p class="muted small"><b>장바구니에 담기</b>는 유효성(온라인 여부)을 검증한 뒤 원하는 항목만 골라 시작합니다. <b>즉시 다운로드</b>는 검증을 건너뛰고 다운로드 목록에 바로 추가합니다.</p>
     </form>
   </section>
 
@@ -204,6 +207,6 @@
 </div>
 
 <div class="toast" id="toast" hidden></div>
-<script src="/static/app.js?v=20"></script>
+<script src="/static/app.js?v=21"></script>
 </body>
 </html>

@@ -134,3 +134,7 @@ details.adv .field{padding-top:4px}
 .card.verifying .bar i{background:var(--warn)}
 .spin{display:inline-block;width:10px;height:10px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;margin-right:5px;vertical-align:-1px;animation:spin .9s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+
+/* 추가 탭: 두 가지 추가 방식 버튼 */
+.add-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.add-actions .btn{white-space:normal;line-height:1.25}

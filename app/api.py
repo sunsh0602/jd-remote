@@ -94,6 +94,32 @@ def _pkg_view(request: Request, p: dict) -> dict:
     }
 
 
+AUTOSTART_TTL = 600.0   # 즉시 다운로드 표시를 유지하는 최대 시간(초). 이 안에 검증이 끝나면 JD 가 알아서 다운로드로 옮긴다.
+
+
+def _pending(request: Request) -> dict[str, float]:
+    st = request.app.state
+    if not hasattr(st, "autostart_pending"):
+        st.autostart_pending = {}
+    now = time.time()
+    for u, ts in list(st.autostart_pending.items()):
+        if now - ts > AUTOSTART_TTL:
+            del st.autostart_pending[u]
+    return st.autostart_pending
+
+
+def _is_autostart(l: dict, pending: dict[str, float]) -> bool:
+    """장바구니(링크그래버)의 링크가 '즉시 다운로드'로 들어와 검증 중인 것인지.
+    URL 이 일치하면 확실. JD 가 URL 을 정규화해 바꿔 놓는 경우가 있어, 그때는 추가 시각이 즉시 다운로드
+    요청 시각과 60초 안에 겹치는지로 판단한다. 오프라인으로 판정된 링크는 JD 가 옮기지 않으므로 장바구니로 돌려보낸다."""
+    if not pending or (l.get("availability") or "").upper() == "OFFLINE":
+        return False
+    if (l.get("url") or "") in pending:
+        return True
+    added = (l.get("addedDate") or 0) / 1000.0
+    return added > 0 and any(abs(added - ts) <= 60 for ts in pending.values())
+
+
 def _link_view(l: dict) -> dict:
     return {
         "uuid": l.get("uuid"),
@@ -142,6 +168,15 @@ async def state(request: Request) -> dict[str, Any]:
     views = [_pkg_view(request, p) for p in pkgs]
     speed = sum(v["speed"] for v in views)
     gp = {p.get("uuid"): p for p in gpkgs}
+    pending = _pending(request)
+    glink_views = []
+    autostart_pkgs: set = set()
+    for l in glinks:
+        v = _link_view(l)
+        v["autostart"] = _is_autostart(l, pending)
+        if v["autostart"]:
+            autostart_pkgs.add(l.get("packageUUID"))
+        glink_views.append(v)
     return {
         "ts": time.time(),
         "jd": {"connected": True, "state": st, "speed": speed, "speedlimit": limit,
@@ -151,10 +186,11 @@ async def state(request: Request) -> dict[str, Any]:
         "packages": views,
         "linkgrabber": {
             "collecting": collecting,
-            "links": [_link_view(l) for l in glinks],
+            "links": glink_views,
             "packages": [{"uuid": p.get("uuid"), "name": _clean_name(p.get("name")),
                           "bytesTotal": p.get("bytesTotal") or 0, "childCount": p.get("childCount") or 0,
-                          "hosts": p.get("hosts") or [], "path": _host_path(request, p.get("saveTo"))}
+                          "hosts": p.get("hosts") or [], "path": _host_path(request, p.get("saveTo")),
+                          "autostart": p.get("uuid") in autostart_pkgs}
                          for p in gp.values()],
         },
     }
@@ -207,6 +243,8 @@ async def add_links(body: AddLinks, request: Request) -> dict:
     s = _settings(request)
     dest = _dest_path(body.destFolder, s)
     await _guard(_jd(request).add_links(urls, body.packageName or None, dest, body.autostart))
+    if body.autostart:
+        _pending(request).update({u: time.time() for u in urls})
     return {"added": len(urls), "urls": urls, "autostart": body.autostart}
 
 

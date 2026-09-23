@@ -170,3 +170,21 @@ def test_cookie_expiry_store_survives_unwritable_path(monkeypatch):
     monkeypatch.setattr(cookie_meta, "STORE_PATH", "/proc/nope/s.json")
     cookie_meta.save_expiry("terabox.com", 1792681952, "ndut_fmt")
     assert cookie_meta.get_expiry("terabox.com") is None
+
+
+# ── 즉시 다운로드 검증 중 판정 (_is_autostart) ──────────────────────────
+def test_is_autostart_url_match_and_offline():
+    from app.api import _is_autostart
+    pend = {"https://x.example/a": 1000.0}
+    assert _is_autostart({"url": "https://x.example/a", "availability": "UNKNOWN"}, pend) is True
+    assert _is_autostart({"url": "https://x.example/a", "availability": "OFFLINE"}, pend) is False   # 오프라인은 장바구니로
+    assert _is_autostart({"url": "https://y.example/b", "availability": "ONLINE"}, pend) is False
+    assert _is_autostart({"url": "https://x.example/a"}, {}) is False
+
+
+def test_is_autostart_added_date_window():
+    from app.api import _is_autostart
+    pend = {"https://x.example/a": 1000.0}
+    # JD 가 URL 을 바꿔 놓아도 추가 시각이 60초 안이면 즉시 다운로드로 본다
+    assert _is_autostart({"url": "https://cdn.example/normalized", "addedDate": 1030 * 1000}, pend) is True
+    assert _is_autostart({"url": "https://cdn.example/normalized", "addedDate": 1200 * 1000}, pend) is False

@@ -127,3 +127,9 @@ details.adv summary::before{content:"▸";display:inline-block;transition:transf
 details.adv[open] summary::before{transform:rotate(90deg)}
 details.adv .field{padding-top:4px}
 .sg-foot{padding-top:12px;border-top:1px solid var(--line)}
+
+/* 다운로드 탭의 '검증 중' 카드: 아직 JD 다운로드 목록에 없는 임시 항목 */
+.card.verifying{border-style:dashed;opacity:.9}
+.card.verifying .bar i{background:var(--warn)}
+.spin{display:inline-block;width:10px;height:10px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;margin-right:5px;vertical-align:-1px;animation:spin .9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}

@@ -113,9 +113,26 @@
     if (state.filter !== 'all') pk = pk.filter((p) => p.kind === state.filter);
     const order = { running: 0, waiting: 1, failed: 2, paused: 3, finished: 4 };
     pk = [...pk].sort((a, b) => (order[a.kind] != null ? order[a.kind] : 9) - (order[b.kind] != null ? order[b.kind] : 9));
-    $('#pkgList').innerHTML = pk.map(pkgCard).join('');
-    $('#pkgEmpty').hidden = pk.length > 0;
+    // '링크 검증 없이 즉시 다운로드'로 넣은 링크: JD 가 검증을 마치면 자동으로 이 목록에 들어온다.
+    // 그 사이에도 사용자가 "어디 갔지?" 하지 않도록 맨 위에 '검증 중' 카드로 보여준다(전체/진행중 필터에서).
+    const verifying = (state.filter === 'all' || state.filter === 'running') ? verifyingCards() : '';
+    $('#pkgList').innerHTML = verifying + pk.map(pkgCard).join('');
+    $('#pkgEmpty').hidden = pk.length > 0 || !!verifying;
     $$('#pkgList .card-wrap').forEach(attachSwipe);
+  }
+  function verifyingCards() {
+    const g = (state.data || {}).linkgrabber; if (!g) return '';
+    const links = (g.links || []).filter((l) => l.autostart);
+    if (!links.length) return '';
+    const byPkg = new Map(); links.forEach((l) => { const k = l.packageUUID; if (!byPkg.has(k)) byPkg.set(k, []); byPkg.get(k).push(l); });
+    const pkgs = new Map((g.packages || []).map((p) => [p.uuid, p]));
+    return [...byPkg.entries()].map(([pid, ls]) => {
+      const p = pkgs.get(pid) || { name: ls[0].name || '(패키지)' };
+      const done = ls.filter((l) => (l.availability || '').toUpperCase() === 'ONLINE').length;
+      return `<li class="card verifying"><div class="title"><span class="name">${esc(p.name)}</span><span class="tag waiting"><i class="spin"></i>검증 중</span></div>
+        <div class="bar"><i style="width:${Math.round(done / ls.length * 100)}%"></i></div>
+        <div class="meta"><span>링크 ${ls.length}개 · ${fmtBytes(ls.reduce((a, l) => a + (l.bytesTotal || 0), 0))}</span><span>검증이 끝나면 자동으로 시작됩니다</span></div></li>`;
+    }).join('');
   }
 
   // ── 스와이프 ─────────────────────────────────────────────────────────
@@ -175,7 +192,8 @@
   function renderGrabber() {
     const g = (state.data || {}).linkgrabber; const ul = $('#grabList');
     if (!g) { ul.innerHTML = ''; $('#grabEmpty').hidden = false; $('#badgeGrab').hidden = true; return; }
-    const links = g.links || [];
+    // 즉시 다운로드로 들어와 검증 중인 링크는 다운로드 탭에 '검증 중' 카드로 보이므로 장바구니에서는 뺀다(한 항목은 한 곳에만).
+    const links = (g.links || []).filter((l) => !l.autostart);
     $('#badgeGrab').hidden = links.length === 0; $('#badgeGrab').textContent = links.length;
     $('#grabberInfo').textContent = links.length ? `장바구니 ${links.length}개 · ${fmtBytes(links.reduce((a, l) => a + (l.bytesTotal || 0), 0))}` : '장바구니 · 검증 후 시작';
     const byPkg = new Map();

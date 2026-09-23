@@ -26,6 +26,7 @@ async def lifespan(app: FastAPI):
     app.state.auth = Auth(s.jd_web_url, s.secret, s.cookie_days)
     app.state.jd = JDClient(s.jd_api_url, timeout=s.jd_timeout_s)
     app.state.lock = LockState()
+    app.state.autostart_pending = {}   # url → 추가 시각. '링크 검증 없이 즉시 다운로드'로 넣은 링크가 검증 중임을 표시하는 데 쓴다
     yield
     await app.state.jd.aclose()
     await app.state.auth.aclose()

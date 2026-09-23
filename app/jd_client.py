@@ -37,7 +37,7 @@ LINK_FIELDS = {
 }
 GRABBER_LINK_FIELDS = {
     "availability": True, "bytesTotal": True, "host": True, "name": True,
-    "url": True, "packageUUID": True, "enabled": True, "comment": True,
+    "url": True, "packageUUID": True, "enabled": True, "comment": True, "addedDate": True,
 }
 GRABBER_PACKAGE_FIELDS = {
     "bytesTotal": True, "childCount": True, "hosts": True, "saveTo": True,

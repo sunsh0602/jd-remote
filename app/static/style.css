@@ -44,7 +44,7 @@ a.icon-btn[hidden]{display:none}
 /* 다운로드 필터 칩: 세로 모드 폰에서는 다섯 개가 가로폭을 균등하게 채운다(스크롤 없음).
    가로 모드·태블릿·PC 에서는 원래 크기로 왼쪽 정렬. */
 @media (orientation: portrait) and (max-width: 600px){
-  /* 일곱 칩을 두 줄로: 1행 전체·검증중·대기·진행중(4), 2행 완료·실패·일시정지(3, 남은 폭을 균등 분할) */
+  /* 여덟 칩을 두 줄로(4+4): 1행 전체·진행중·대기·검증중, 2행 완료·실패·조치필요·일시정지 */
   #filterChips{overflow:visible;gap:5px;flex-wrap:wrap}
   #filterChips .chip{flex:1 1 calc(25% - 4px);min-width:0;padding:6px 2px;text-align:center;font-size:13px;letter-spacing:-.01em}
   #filterChips .chip.active{font-weight:600}
@@ -61,7 +61,7 @@ a.icon-btn[hidden]{display:none}
 .card .title{display:flex;align-items:flex-start;gap:8px}
 .card .name{flex:1;min-width:0;font-weight:600;word-break:break-all;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .tag{font-size:12px;padding:2px 8px;border-radius:999px;background:var(--bg2);color:var(--muted);white-space:nowrap}
-.tag.running{color:var(--accent)}.tag.finished{color:var(--ok)}.tag.failed{color:var(--bad)}.tag.paused{color:var(--pause)}.tag.waiting{color:var(--warn)}
+.tag.running{color:var(--accent)}.tag.finished{color:var(--ok)}.tag.failed{color:var(--bad)}.tag.action{color:var(--warn);border:1px solid var(--warn)}.tag.paused{color:var(--pause)}.tag.waiting{color:var(--warn)}
 .tag.ONLINE{color:var(--ok)}.tag.OFFLINE,.tag.UNKNOWN{color:var(--bad)}.tag.TEMP_UNKNOWN{color:var(--warn)}
 .bar{height:6px;border-radius:3px;background:var(--bg2);overflow:hidden}
 .bar i{display:block;height:100%;background:var(--accent);border-radius:3px;transition:width .4s}

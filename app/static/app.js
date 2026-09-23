@@ -96,11 +96,12 @@
     meta.push(`${fmtBytes(p.bytesLoaded)} / ${fmtBytes(p.bytesTotal)}`);
     if (p.childCount > 1) meta.push(`${p.childCount}개 파일`);
     if (p.hosts && p.hosts.length) meta.push(esc(p.hosts.slice(0, 2).join(', ')));
-    const label = { running: '진행중', finished: '완료', failed: '실패', paused: '일시정지', waiting: '대기' }[p.kind] || p.kind;
+    const label = { running: '진행중', finished: '완료', failed: '실패', action: '조치 필요', paused: '일시정지', waiting: '대기' }[p.kind] || p.kind;
+    const detail = p.kind === 'action' && p.reason ? ' · ' + esc(p.reason) : (p.kind === 'failed' && p.status ? ' · ' + esc(p.status) : '');
     return `<li class="card-wrap" data-uuid="${p.uuid}">
       <div class="card-bg"><span class="l">${p.enabled ? '⏸ 일시정지' : '▶ 재개'}</span><span class="r">🗑 삭제</span></div>
       <div class="card ${p.kind}" data-uuid="${p.uuid}">
-        <div class="title"><span class="name">${esc(p.name)}</span><span class="tag ${p.kind}">${label}${p.status && p.kind === 'failed' ? ' · ' + esc(p.status) : ''}</span></div>
+        <div class="title"><span class="name">${esc(p.name)}</span><span class="tag ${p.kind}">${label}${detail}</span></div>
         <div class="bar"><i style="width:${pct}%"></i></div>
         <div class="meta"><span>${pct}%</span>${meta.filter(Boolean).map((m) => `<span>${m}</span>`).join('')}</div>
       </div></li>`;
@@ -112,13 +113,13 @@
     $('#badgeDl').textContent = pk.filter((p) => p.kind === 'running').length;
     if (state.filter === 'verifying') pk = [];                          // 검증중은 JD 다운로드 목록엔 없는 임시 항목
     else if (state.filter !== 'all') pk = pk.filter((p) => p.kind === state.filter);
-    const order = { running: 0, waiting: 1, failed: 2, paused: 3, finished: 4 };
+    const order = { running: 0, waiting: 1, action: 2, failed: 3, paused: 4, finished: 5 };
     pk = [...pk].sort((a, b) => (order[a.kind] != null ? order[a.kind] : 9) - (order[b.kind] != null ? order[b.kind] : 9));
     // '링크 검증 없이 즉시 다운로드'로 넣은 링크: JD 가 검증을 마치면 자동으로 이 목록에 들어온다.
     // 그 사이에도 사용자가 "어디 갔지?" 하지 않도록 맨 위에 '검증 중' 카드로 보여준다(전체/진행중 필터에서).
     const verifying = (state.filter === 'all' || state.filter === 'verifying') ? verifyingCards() : '';
     $('#pkgList').innerHTML = verifying + pk.map(pkgCard).join('');
-    const EMPTY = { all: '다운로드가 없습니다.', verifying: '검증 중인 링크가 없습니다.', waiting: '대기 중인 다운로드가 없습니다.', running: '진행 중인 다운로드가 없습니다.', finished: '완료된 다운로드가 없습니다.', failed: '실패한 다운로드가 없습니다.', paused: '일시정지된 다운로드가 없습니다.' };
+    const EMPTY = { all: '다운로드가 없습니다.', verifying: '검증 중인 링크가 없습니다.', waiting: '대기 중인 다운로드가 없습니다.', running: '진행 중인 다운로드가 없습니다.', finished: '완료된 다운로드가 없습니다.', failed: '실패한 다운로드가 없습니다.', action: '조치가 필요한 다운로드가 없습니다.', paused: '일시정지된 다운로드가 없습니다.' };
     $('#pkgEmpty').textContent = EMPTY[state.filter] || '해당 상태의 다운로드가 없습니다.';
     $('#pkgEmpty').hidden = pk.length > 0 || !!verifying;
     $$('#pkgList .card-wrap').forEach(attachSwipe);

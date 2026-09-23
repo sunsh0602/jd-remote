@@ -188,3 +188,18 @@ def test_is_autostart_added_date_window():
     # JD 가 URL 을 바꿔 놓아도 추가 시각이 60초 안이면 즉시 다운로드로 본다
     assert _is_autostart({"url": "https://cdn.example/normalized", "addedDate": 1030 * 1000}, pend) is True
     assert _is_autostart({"url": "https://cdn.example/normalized", "addedDate": 1200 * 1000}, pend) is False
+
+
+# ── 상태 분류: 실패 vs 조치 필요 ──────────────────────────────────────────
+def test_classify_status_action_vs_failed():
+    from app.api import classify_status
+    assert classify_status("Waiting for captcha") == ("action", "캡차 대기")
+    assert classify_status("Account required") == ("action", "계정 필요")
+    assert classify_status("Account error: premium expired") == ("action", "계정 필요")   # 계정 문제는 error 보다 우선
+    assert classify_status("Skipped - File already exists") == ("action", "파일 존재")
+    assert classify_status("Not enough disk space") == ("action", "저장 공간")
+    assert classify_status("File not found") == ("failed", None)
+    assert classify_status("Offline") == ("failed", None)
+    assert classify_status("Invalid URL") == ("failed", None)
+    assert classify_status("Connecting…") == ("waiting", None)
+    assert classify_status("") == ("waiting", None)

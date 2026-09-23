@@ -11,7 +11,7 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/static/icons/icon-192.png">
 <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
-<link rel="stylesheet" href="/static/style.css?v=19">
+<link rel="stylesheet" href="/static/style.css?v=20">
 </head>
 <body>
 <header class="top">
@@ -36,13 +36,14 @@
   <section id="tab-downloads" class="tab active">
     <div class="filterbar">
       <div class="chips" id="filterChips">
-        <!-- 1행(세로 모드): 전체 + 진행 파이프라인(검증중 → 대기 → 진행중) / 2행: 끝난 상태(완료 · 실패 · 일시정지) -->
+        <!-- 1행(세로 모드): 저절로 흘러가는 상태 — 전체 · 진행중 · 대기 · 검증중 (지금 → 다음 → 나중) / 2행: 사용자가 결정해야 하는 상태 — 완료 · 실패 · 조치필요 · 일시정지 -->
         <button class="chip active" data-f="all">전체</button>
-        <button class="chip" data-f="verifying">검증중</button>
-        <button class="chip" data-f="waiting">대기</button>
         <button class="chip" data-f="running">진행중</button>
+        <button class="chip" data-f="waiting">대기</button>
+        <button class="chip" data-f="verifying">검증중</button>
         <button class="chip" data-f="finished">완료</button>
         <button class="chip" data-f="failed">실패</button>
+        <button class="chip" data-f="action">조치필요</button>
         <button class="chip" data-f="paused">일시정지</button>
       </div>
     </div>
@@ -203,6 +204,6 @@
 </div>
 
 <div class="toast" id="toast" hidden></div>
-<script src="/static/app.js?v=19"></script>
+<script src="/static/app.js?v=20"></script>
 </body>
 </html>

@@ -56,6 +56,29 @@ def _clean_name(name: str | None) -> str:
     return (name or "").replace("⁄", "/").strip("/ ") or "(이름 없음)"
 
 
+# 상태 문구 키워드 → (kind, 원인 라벨). 앞에서부터 먼저 맞는 것을 쓴다.
+# '조치 필요'(action): 사용자가 원인을 풀면 이어지는 상태.  '실패'(failed): 링크가 죽었거나 잘못됨.
+_ACTION_RULES = (
+    ("captcha", "캡차 대기"),
+    ("account", "계정 필요"), ("login", "계정 필요"), ("premium", "계정 필요"),
+    ("exist", "파일 존재"),
+    ("disk", "저장 공간"), ("quota", "저장 공간"), ("space", "저장 공간"),
+    ("skip", "건너뜀"),
+)
+_FAILED_KEYS = ("error", "fail", "offline", "not found", "invalid")
+
+
+def classify_status(status: str) -> tuple[str, str | None]:
+    """JD 패키지 status 문구를 (kind, reason) 으로. kind 는 action/failed/waiting 중 하나."""
+    low = (status or "").lower()
+    for key, label in _ACTION_RULES:
+        if key in low:
+            return "action", label
+    if any(k in low for k in _FAILED_KEYS):
+        return "failed", None
+    return "waiting", None
+
+
 def _pkg_view(request: Request, p: dict) -> dict:
     total = p.get("bytesTotal") or 0
     loaded = p.get("bytesLoaded") or 0
@@ -63,17 +86,15 @@ def _pkg_view(request: Request, p: dict) -> dict:
     finished = bool(p.get("finished"))
     running = bool(p.get("running")) or (p.get("speed") or 0) > 0
     enabled = p.get("enabled", True)
-    low = status.lower()
+    reason = None
     if finished:
         kind = "finished"
     elif running:
         kind = "running"
     elif not enabled:
         kind = "paused"
-    elif any(k in low for k in ("error", "fail", "offline", "not found", "invalid", "captcha")):
-        kind = "failed"
     else:
-        kind = "waiting"
+        kind, reason = classify_status(status)
     return {
         "uuid": p.get("uuid"),
         "name": _clean_name(p.get("name")),
@@ -84,6 +105,7 @@ def _pkg_view(request: Request, p: dict) -> dict:
         "eta": p.get("eta"),
         "status": status,
         "kind": kind,
+        "reason": reason,
         "finished": finished,
         "running": running,
         "enabled": enabled,

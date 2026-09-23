@@ -11,7 +11,7 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/static/icons/icon-192.png">
 <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
-<link rel="stylesheet" href="/static/style.css?v=18">
+<link rel="stylesheet" href="/static/style.css?v=19">
 </head>
 <body>
 <header class="top">
@@ -36,7 +36,10 @@
   <section id="tab-downloads" class="tab active">
     <div class="filterbar">
       <div class="chips" id="filterChips">
+        <!-- 1행(세로 모드): 전체 + 진행 파이프라인(검증중 → 대기 → 진행중) / 2행: 끝난 상태(완료 · 실패 · 일시정지) -->
         <button class="chip active" data-f="all">전체</button>
+        <button class="chip" data-f="verifying">검증중</button>
+        <button class="chip" data-f="waiting">대기</button>
         <button class="chip" data-f="running">진행중</button>
         <button class="chip" data-f="finished">완료</button>
         <button class="chip" data-f="failed">실패</button>
@@ -45,7 +48,7 @@
     </div>
     <div class="pull-hint" id="pullHint">↓ 당겨서 새로고침</div>
     <ul class="list" id="pkgList"></ul>
-    <p class="empty" id="pkgEmpty" hidden>다운로드가 없습니다.</p>
+    <p class="empty" id="pkgEmpty" hidden></p>
   </section>
 
   <!-- 장바구니(JD 링크그래버) 탭 -->
@@ -200,6 +203,6 @@
 </div>
 
 <div class="toast" id="toast" hidden></div>
-<script src="/static/app.js?v=18"></script>
+<script src="/static/app.js?v=19"></script>
 </body>
 </html>

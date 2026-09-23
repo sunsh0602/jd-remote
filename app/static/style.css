@@ -44,8 +44,9 @@ a.icon-btn[hidden]{display:none}
 /* 다운로드 필터 칩: 세로 모드 폰에서는 다섯 개가 가로폭을 균등하게 채운다(스크롤 없음).
    가로 모드·태블릿·PC 에서는 원래 크기로 왼쪽 정렬. */
 @media (orientation: portrait) and (max-width: 600px){
-  #filterChips{overflow:visible;gap:5px}
-  #filterChips .chip{flex:1 1 0;min-width:0;padding:6px 2px;text-align:center;font-size:13px;letter-spacing:-.01em}
+  /* 일곱 칩을 두 줄로: 1행 전체·검증중·대기·진행중(4), 2행 완료·실패·일시정지(3, 남은 폭을 균등 분할) */
+  #filterChips{overflow:visible;gap:5px;flex-wrap:wrap}
+  #filterChips .chip{flex:1 1 calc(25% - 4px);min-width:0;padding:6px 2px;text-align:center;font-size:13px;letter-spacing:-.01em}
   #filterChips .chip.active{font-weight:600}
 }
 .pull-hint{text-align:center;color:var(--muted);font-size:13px;height:0;overflow:hidden;transition:height .15s}

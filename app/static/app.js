@@ -110,13 +110,16 @@
     let pk = d.packages || [];
     $('#badgeDl').hidden = !pk.some((p) => p.kind === 'running');
     $('#badgeDl').textContent = pk.filter((p) => p.kind === 'running').length;
-    if (state.filter !== 'all') pk = pk.filter((p) => p.kind === state.filter);
+    if (state.filter === 'verifying') pk = [];                          // 검증중은 JD 다운로드 목록엔 없는 임시 항목
+    else if (state.filter !== 'all') pk = pk.filter((p) => p.kind === state.filter);
     const order = { running: 0, waiting: 1, failed: 2, paused: 3, finished: 4 };
     pk = [...pk].sort((a, b) => (order[a.kind] != null ? order[a.kind] : 9) - (order[b.kind] != null ? order[b.kind] : 9));
     // '링크 검증 없이 즉시 다운로드'로 넣은 링크: JD 가 검증을 마치면 자동으로 이 목록에 들어온다.
     // 그 사이에도 사용자가 "어디 갔지?" 하지 않도록 맨 위에 '검증 중' 카드로 보여준다(전체/진행중 필터에서).
-    const verifying = (state.filter === 'all' || state.filter === 'running') ? verifyingCards() : '';
+    const verifying = (state.filter === 'all' || state.filter === 'verifying') ? verifyingCards() : '';
     $('#pkgList').innerHTML = verifying + pk.map(pkgCard).join('');
+    const EMPTY = { all: '다운로드가 없습니다.', verifying: '검증 중인 링크가 없습니다.', waiting: '대기 중인 다운로드가 없습니다.', running: '진행 중인 다운로드가 없습니다.', finished: '완료된 다운로드가 없습니다.', failed: '실패한 다운로드가 없습니다.', paused: '일시정지된 다운로드가 없습니다.' };
+    $('#pkgEmpty').textContent = EMPTY[state.filter] || '해당 상태의 다운로드가 없습니다.';
     $('#pkgEmpty').hidden = pk.length > 0 || !!verifying;
     $$('#pkgList .card-wrap').forEach(attachSwipe);
   }

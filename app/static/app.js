@@ -73,7 +73,7 @@
     // 배너
     const b = [];
     if (!jd.connected) b.push({ k: 'bad', t: 'JDownloader에 연결할 수 없습니다. ' + (jd.hint ? 'NAS에서: ' + jd.hint : ''), a: null });
-    if (jd.captchas > 0) b.push({ k: 'warn', t: `캡차 ${jd.captchas}개가 입력을 기다립니다`, a: { href: jd.novncUrl, label: 'JD 화면 열기' } });
+    if (jd.captchas > 0) b.push({ k: 'warn', t: `캡차 ${jd.captchas}개가 입력을 기다립니다`, a: { href: jd.novncUrl, label: 'JDownloader2(noVNC) 접속' } });
     if (jd.accountAlert) b.push({ k: 'bad', t: jd.accountAlert + ' — 계정 탭에서 쿠키를 갱신하세요', a: { onclick: () => showTab('accounts'), label: '계정 탭' } });
     if (d.linkgrabber && d.linkgrabber.collecting) b.push({ k: 'info', t: '링크를 확인하는 중…', a: null });
     const failed = (d.packages || []).filter((p) => p.kind === 'failed').length;
@@ -156,7 +156,7 @@
       A.push(p.enabled ? ['⏸ 일시정지', () => api(`/packages/${p.uuid}/pause`, { method: 'POST' })] : ['▶ 재개', () => api(`/packages/${p.uuid}/resume`, { method: 'POST' })]);
       if (p.kind === 'failed' || p.kind === 'paused') A.push(['🔁 재시도', () => api('/links/retry', { method: 'POST', body: { packageIds: [p.uuid] } })]);
       if (p.path) A.push(['📋 경로 복사', async () => { await navigator.clipboard.writeText(p.path); }]);
-      if (state.data.jd.dsmUrl) A.push(['🗂 DSM 열기', async () => { window.open(state.data.jd.dsmUrl + '/?launchApp=SYNO.SDS.App.FileStation3.Instance', '_blank'); }]);
+      if (state.data.jd.dsmUrl) A.push(['🗂 DSM(File Station) 접속', async () => { window.open(state.data.jd.dsmUrl + '/?launchApp=SYNO.SDS.App.FileStation3.Instance', '_blank'); }]);
     }
     A.push(['🗑 목록에서 제거', () => api('/packages/remove', { method: 'POST', body: { packageIds: [p.uuid], deleteFiles: false } }), true]);
     A.push(['❌ 파일까지 삭제', async () => { if (!confirm(`"${p.name}"\n파일까지 완전히 삭제할까요?`)) throw new Error('취소'); return api('/packages/remove', { method: 'POST', body: { packageIds: [p.uuid], deleteFiles: true } }); }, true]);

@@ -22,6 +22,7 @@ a{color:var(--accent)}
 .btn{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:0 14px;min-height:var(--tap);display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;cursor:pointer;text-decoration:none}
 .btn:active{transform:scale(.97)}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.success{background:var(--ok);border-color:var(--ok);color:#fff}
 .btn.danger{background:transparent;border-color:var(--bad);color:var(--bad)}
 .btn.small{min-height:36px;padding:0 12px;font-size:14px}
 .btn.wide{width:100%}
@@ -138,3 +139,6 @@ details.adv .field{padding-top:4px}
 /* 추가 탭: 두 가지 추가 방식 버튼 */
 .add-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .add-actions .btn{white-space:normal;line-height:1.25}
+.add-help{line-height:1.7}
+.add-help b.ok{color:var(--ok)}
+.add-help b.accent{color:var(--accent)}

@@ -11,7 +11,7 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/static/icons/icon-192.png">
 <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
-<link rel="stylesheet" href="/static/style.css?v=21">
+<link rel="stylesheet" href="/static/style.css?v=22">
 </head>
 <body>
 <header class="top">
@@ -82,10 +82,13 @@
       </label>
       <!-- 두 가지 추가 방식을 버튼으로 바로 고른다(체크박스·팝업 없이 한 번의 탭) -->
       <div class="add-actions">
-        <button type="button" class="btn primary" id="btnAddCart" data-mode="cart">🧺 장바구니에 담기</button>
-        <button type="button" class="btn" id="btnAddNow" data-mode="now">⚡ 즉시 다운로드</button>
+        <button type="button" class="btn success" id="btnAddCart" data-mode="cart">🧺 장바구니에 담기</button>
+        <button type="button" class="btn primary" id="btnAddNow" data-mode="now">⚡ 즉시 다운로드</button>
       </div>
-      <p class="muted small"><b>장바구니에 담기</b>는 유효성(온라인 여부)을 검증한 뒤 원하는 항목만 골라 시작합니다. <b>즉시 다운로드</b>는 검증을 건너뛰고 다운로드 목록에 바로 추가합니다.</p>
+            <p class="muted small add-help">
+        <b class="ok">🧺 장바구니에 담기</b> — 유효성(온라인 여부)을 검증한 뒤 원하는 항목만 골라 시작합니다.<br>
+        <b class="accent">⚡ 즉시 다운로드</b> — 검증을 건너뛰고 다운로드 목록에 바로 추가합니다.
+      </p>
     </form>
   </section>
 
@@ -207,6 +210,6 @@
 </div>
 
 <div class="toast" id="toast" hidden></div>
-<script src="/static/app.js?v=21"></script>
+<script src="/static/app.js?v=22"></script>
 </body>
 </html>

@@ -177,7 +177,7 @@
     if (!g) { ul.innerHTML = ''; $('#grabEmpty').hidden = false; $('#badgeGrab').hidden = true; return; }
     const links = g.links || [];
     $('#badgeGrab').hidden = links.length === 0; $('#badgeGrab').textContent = links.length;
-    $('#grabberInfo').textContent = links.length ? `장바구니 ${links.length}개 · ${fmtBytes(links.reduce((a, l) => a + (l.bytesTotal || 0), 0))}` : '장바구니 · 확인 후 시작하세요';
+    $('#grabberInfo').textContent = links.length ? `장바구니 ${links.length}개 · ${fmtBytes(links.reduce((a, l) => a + (l.bytesTotal || 0), 0))}` : '장바구니 · 검증 후 시작';
     const byPkg = new Map();
     links.forEach((l) => { const k = l.packageUUID; if (!byPkg.has(k)) byPkg.set(k, []); byPkg.get(k).push(l); });
     const pkgs = new Map((g.packages || []).map((p) => [p.uuid, p]));

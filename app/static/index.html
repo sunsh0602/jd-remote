@@ -11,7 +11,7 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/static/icons/icon-192.png">
 <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
-<link rel="stylesheet" href="/static/style.css?v=16">
+<link rel="stylesheet" href="/static/style.css?v=17">
 </head>
 <body>
 <header class="top">
@@ -51,13 +51,13 @@
   <!-- 장바구니(JD 링크그래버) 탭 -->
   <section id="tab-grabber" class="tab">
     <div class="filterbar">
-      <span class="muted" id="grabberInfo">장바구니 · 확인 후 시작하세요</span>
+      <span class="muted" id="grabberInfo">장바구니 · 검증 후 시작</span>
       <div class="spacer"></div>
       <button class="btn small" id="btnClearOffline">오프라인 제거</button>
       <button class="btn small primary" id="btnStartAll">전체 다운로드 시작</button>
     </div>
     <ul class="list" id="grabList"></ul>
-    <p class="empty" id="grabEmpty" hidden>장바구니가 비었습니다.<br><span class="muted">추가 탭에서 링크를 넣으면 여기에 담기고, 살아 있는 링크인지 확인한 뒤 시작합니다.</span></p>
+    <p class="empty" id="grabEmpty" hidden>장바구니가 비었습니다.<br><span class="muted">추가 탭에서 넣은 링크가 여기에 담기고 유효성이 검증됩니다. 결과를 확인한 뒤 시작하세요.</span></p>
   </section>
 
   <!-- 추가 탭 -->
@@ -76,9 +76,9 @@
         <span>저장 위치 (기본 다운로드 폴더. 뒤에 하위 폴더를 붙일 수 있습니다)</span>
         <input id="addFolder" type="text" placeholder="비우면 기본 다운로드 폴더">
       </label>
-      <label class="check"><input type="checkbox" id="addAutostart"> 확인 없이 바로 다운로드 시작</label>
+      <label class="check"><input type="checkbox" id="addAutostart"> 링크 검증 없이 즉시 다운로드</label>
       <button type="submit" class="btn primary wide" id="btnAdd">＋ 링크 추가</button>
-      <p class="muted small">기본은 <b>장바구니</b>에 먼저 담깁니다. 살아 있는 링크인지 확인한 뒤 시작하세요.</p>
+      <p class="muted small">추가한 링크는 <b>장바구니</b>에 담겨 유효성(온라인 여부)이 검증됩니다. 결과를 보고 원하는 항목만 시작하세요. 위 옵션을 켜면 이 단계를 건너뛰고 다운로드 목록에 바로 추가됩니다.</p>
     </form>
   </section>
 
@@ -200,6 +200,6 @@
 </div>
 
 <div class="toast" id="toast" hidden></div>
-<script src="/static/app.js?v=16"></script>
+<script src="/static/app.js?v=17"></script>
 </body>
 </html>

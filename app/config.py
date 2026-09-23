@@ -21,6 +21,7 @@ class Settings:
     download_root: str         # 같은 폴더의 NAS 호스트 경로 (사람에게 보여줄 경로)
     novnc_url: str
     dsm_url: str
+    browser_url: str
     poll_ms: int
     cookie_days: int
     jd_timeout_s: float
@@ -40,6 +41,7 @@ def load() -> Settings:
         download_root=_env("DOWNLOAD_ROOT", "/volume1/Downloads") or "",
         novnc_url=_env("NOVNC_URL", "") or "",
         dsm_url=_env("DSM_URL", "") or "",
+        browser_url=_env("BROWSER_URL", "") or "",   # 폰용 TeraBox 쿠키 갱신 크롬(browser/). 비우면 아이콘 숨김
         poll_ms=int(_env("POLL_MS", "3000") or 3000),
         cookie_days=int(_env("COOKIE_DAYS", "30") or 30),
         jd_timeout_s=float(_env("JD_TIMEOUT_S", "10") or 10),

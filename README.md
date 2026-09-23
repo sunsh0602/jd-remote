@@ -61,6 +61,7 @@ JDR_SECRET=dev JD_API_URL=http://<nas-lan-ip>:3128 JD_WEB_URL=http://<nas-lan-ip
 | `JD_API_URL` | `http://jdownloader2:3128` | JD RemoteAPI |
 | `JD_OUTPUT_PREFIX` / `DOWNLOAD_ROOT` | `/output` / `/volume1/Downloads` | JD 내부 경로 ↔ 표시용 호스트 경로(.env에서 실제 값 지정) |
 | `NOVNC_URL` / `DSM_URL` | (없음) | 배너·설정 링크. 비우면 해당 버튼 숨김 |
+| `BROWSER_URL` | (없음) | 폰용 쿠키 갱신 크롬([browser/](browser/README.md)). 상단 🌐 아이콘. 비우면 숨김 |
 | `POLL_MS` / `COOKIE_DAYS` | `3000` / `30` | 폴링 주기, 로그인 유지 |
 
 ## 인증 위임 메모

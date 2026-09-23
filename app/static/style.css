@@ -26,7 +26,8 @@ a{color:var(--accent)}
 .btn.small{min-height:36px;padding:0 12px;font-size:14px}
 .btn.wide{width:100%}
 .btn.on{border-color:var(--warn);color:var(--warn)}
-.icon-btn{background:transparent;border:0;font-size:20px;width:var(--tap);height:var(--tap);border-radius:50%;cursor:pointer}
+.icon-btn{background:transparent;border:0;font-size:20px;width:var(--tap);height:var(--tap);border-radius:50%;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;color:inherit}
+a.icon-btn[hidden]{display:none}
 .icon-btn:active{background:var(--card)}
 #banners{display:flex;flex-direction:column;gap:6px;margin-top:6px}
 .banner{display:flex;align-items:center;gap:10px;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:14px}

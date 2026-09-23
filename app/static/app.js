@@ -82,6 +82,7 @@
     $$('[data-banner]').forEach((el) => el.addEventListener('click', () => b[+el.dataset.banner].a.onclick()));
     $('#linkNovnc').hidden = !jd.novncUrl; if (jd.novncUrl) $('#linkNovnc').href = jd.novncUrl;
     $('#linkDsm').hidden = !jd.dsmUrl; if (jd.dsmUrl) $('#linkDsm').href = jd.dsmUrl;
+    $('#linkBrowser').hidden = !jd.browserUrl; if (jd.browserUrl) $('#linkBrowser').href = jd.browserUrl;
     if (jd.downloadRoot) { $('#dlRootText').textContent = '다운로드 폴더: ' + jd.downloadRoot; setDownloadRoot(jd.downloadRoot); }
     if (jd.pollMs && !LS.get('pollMs', null)) state.pollMs = jd.pollMs;
   }

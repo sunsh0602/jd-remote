@@ -141,8 +141,8 @@
     <section class="sg">
       <h3>바로가기</h3>
       <div class="sg-links">
-        <a class="btn" id="linkNovnc" href="#" target="_blank" rel="noopener">🖥 JDownloader2(noVNC) 접속</a>
-        <a class="btn" id="linkBrowser" href="#" target="_blank" rel="noopener" hidden>🍪 쿠키 갱신 접속</a>
+        <a class="btn" id="linkNovnc" href="#" target="_blank" rel="noopener" data-name="JDownloader2(noVNC) 접속">🖥 JDownloader2(noVNC) 접속<em class="unset-tag">미설정</em></a>
+        <a class="btn" id="linkBrowser" href="#" target="_blank" rel="noopener" data-name="쿠키 갱신 접속">🍪 쿠키 갱신 접속<em class="unset-tag">미설정</em></a>
       </div>
       <p class="muted small" id="dlRootText"></p>
     </section>
@@ -158,15 +158,15 @@
       <label class="sg-row"><span>앱 열 때 클립보드 URL 감지</span><input type="checkbox" class="switch" id="setClipboard" checked></label>
     </section>
 
-    <!-- 3. 고급: 한 번 정하면 거의 안 바꾸는 값 → 접어 둔다 -->
+    <!-- 3. 고급: 바로가기 주소. 한 번 정하면 거의 안 바꾸므로 접어 둔다 -->
     <details class="sg adv">
-      <summary>고급 · 쿠키 갱신 접속 주소</summary>
-      <form id="setBrowserForm" autocomplete="off" class="field">
-        <div class="row">
-          <input id="setBrowserUrl" type="url" inputmode="url" autocapitalize="off" placeholder="https://… (비우면 서버 기본값, 없으면 버튼 숨김)" style="flex:1;min-width:0">
-          <button type="submit" class="btn small primary" id="setBrowserSave">저장</button>
-        </div>
-        <p class="muted small" id="setBrowserHint"></p>
+      <summary>고급 (바로가기 주소 설정)</summary>
+      <form id="setLinksForm" autocomplete="off" class="sg-form">
+        <label class="field"><span>JDownloader2(noVNC) 접속 주소</span>
+          <input id="setNovncUrl" type="url" inputmode="url" autocapitalize="off" placeholder="https://…"></label>
+        <label class="field"><span>쿠키 갱신 접속 주소</span>
+          <input id="setBrowserUrl" type="url" inputmode="url" autocapitalize="off" placeholder="https://…"></label>
+        <button type="submit" class="btn primary wide">저장</button>
       </form>
     </details>
 

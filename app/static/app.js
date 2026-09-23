@@ -11,7 +11,7 @@
   };
   const state = {
     data: null, filter: LS.get('filter', 'all'), tab: LS.get('tab', 'downloads'), downloadRoot: '',
-    pollMs: LS.get('pollMs', 3000), browserUrl: LS.get('browserUrl', ''), serverBrowserUrl: '',
+    pollMs: LS.get('pollMs', 3000), browserUrl: LS.get('browserUrl', ''), novncUrl: LS.get('novncUrl', ''), server: { browserUrl: '', novncUrl: '' },
     clipboard: LS.get('clipboard', true), lastClip: LS.get('lastClip', ''),
     speeds: new Array(60).fill(0), timer: null, inflight: false, expanded: new Set(), openPkg: null,
   };
@@ -73,16 +73,15 @@
     // 배너
     const b = [];
     if (!jd.connected) b.push({ k: 'bad', t: 'JDownloader에 연결할 수 없습니다. ' + (jd.hint ? 'NAS에서: ' + jd.hint : ''), a: null });
-    if (jd.captchas > 0) b.push({ k: 'warn', t: `캡차 ${jd.captchas}개가 입력을 기다립니다`, a: { href: jd.novncUrl, label: 'JDownloader2(noVNC) 접속' } });
+    if (jd.captchas > 0) b.push({ k: 'warn', t: `캡차 ${jd.captchas}개가 입력을 기다립니다`, a: effectiveUrl('novncUrl') ? { href: effectiveUrl('novncUrl'), label: 'JDownloader2(noVNC) 접속' } : null });
     if (jd.accountAlert) b.push({ k: 'bad', t: jd.accountAlert + ' — 계정 탭에서 쿠키를 갱신하세요', a: { onclick: () => showTab('accounts'), label: '계정 탭' } });
     if (d.linkgrabber && d.linkgrabber.collecting) b.push({ k: 'info', t: '링크를 확인하는 중…', a: null });
     const failed = (d.packages || []).filter((p) => p.kind === 'failed').length;
     if (failed) b.push({ k: 'warn', t: `실패한 패키지 ${failed}개`, a: { onclick: () => { setFilter('failed'); showTab('downloads'); }, label: '보기' } });
     $('#banners').innerHTML = b.map((x, i) => `<div class="banner ${x.k}"><span class="txt">${esc(x.t)}</span>${x.a ? (x.a.href ? `<a class="btn small" target="_blank" rel="noopener" href="${esc(x.a.href)}">${esc(x.a.label)}</a>` : `<button class="btn small" data-banner="${i}">${esc(x.a.label)}</button>`) : ''}</div>`).join('');
     $$('[data-banner]').forEach((el) => el.addEventListener('click', () => b[+el.dataset.banner].a.onclick()));
-    $('#linkNovnc').hidden = !jd.novncUrl; if (jd.novncUrl) $('#linkNovnc').href = jd.novncUrl;
-    state.serverBrowserUrl = jd.browserUrl || ''; applyBrowserLink();
-    if (jd.downloadRoot) { $('#dlRootText').textContent = '다운로드 폴더: ' + jd.downloadRoot; setDownloadRoot(jd.downloadRoot); }
+    state.server.novncUrl = jd.novncUrl || ''; state.server.browserUrl = jd.browserUrl || ''; applyLinks();
+    if (jd.downloadRoot) { $('#dlRootText').textContent = '기본 다운로드 폴더: ' + jd.downloadRoot; setDownloadRoot(jd.downloadRoot); }
     if (jd.pollMs && !LS.get('pollMs', null)) state.pollMs = jd.pollMs;
   }
 
@@ -316,22 +315,25 @@
   $('#spApply').addEventListener('click', () => { const mb = parseFloat($('#spValue').value); closeSheets(); act('속도 제한 적용', () => api('/speedlimit', { method: 'PUT', body: { enabled: $('#spEnabled').checked, limit: mb > 0 ? Math.round(mb * 1048576) : null } })); });
 
   // ── 설정 시트 ─────────────────────────────────────────────────────────
-  // 설정의 '쿠키 갱신 접속' 버튼: 사용자가 설정에 넣은 주소가 우선, 없으면 서버(.env BROWSER_URL) 기본값, 둘 다 없으면 숨김
-  function effectiveBrowserUrl() { return state.browserUrl || state.serverBrowserUrl || ''; }
-  function applyBrowserLink() { const u = effectiveBrowserUrl(); $('#linkBrowser').hidden = !u; if (u) $('#linkBrowser').href = u; }
+  // 바로가기 주소: 사용자가 고급에서 넣은 값 > 서버(.env) 기본값. 둘 다 없으면 버튼은 보이되 '미설정' 표시 + 누르면 빨간 안내.
+  const LINKS = { novncUrl: '#linkNovnc', browserUrl: '#linkBrowser' };
+  function effectiveUrl(k) { return state[k] || state.server[k] || ''; }
+  function applyLinks() {
+    for (const k in LINKS) { const a = $(LINKS[k]), u = effectiveUrl(k); a.classList.toggle('unset', !u); a.href = u || '#'; if (u) a.target = '_blank'; else a.removeAttribute('target'); }
+  }
+  for (const k in LINKS) $(LINKS[k]).addEventListener('click', (e) => { if (!effectiveUrl(k)) { e.preventDefault(); toast(`${$(LINKS[k]).dataset.name} 주소가 지정되지 않았습니다. 고급(바로가기 주소 설정)에서 입력하세요.`, true); } });
   function validUrl(v) { try { const u = new URL(v); return /^https?:$/.test(u.protocol) ? u.href : ''; } catch (e) { return ''; } }
   $('#settingsBtn').addEventListener('click', () => {
     $$('#pollChips .chip').forEach((c) => c.classList.toggle('active', +c.dataset.s * 1000 === state.pollMs)); $('#setClipboard').checked = state.clipboard;
-    $('#setBrowserUrl').value = state.browserUrl;
-    $('#setBrowserHint').textContent = state.serverBrowserUrl ? `비우면 서버 기본값 사용: ${state.serverBrowserUrl}` : '서버 기본값이 없습니다. 주소를 넣으면 위에 쿠키 갱신 접속 버튼이 생깁니다.';
+    $('#setNovncUrl').value = state.novncUrl; $('#setBrowserUrl').value = state.browserUrl;
     $('#settingsSheet').hidden = false;
   });
-  $('#setBrowserForm').addEventListener('submit', (e) => {
+  $('#setLinksForm').addEventListener('submit', (e) => {
     e.preventDefault();
-    const el = $('#setBrowserUrl'), raw = el.value.trim();
-    if (raw && !validUrl(raw)) { toast('http:// 또는 https:// 로 시작하는 주소를 넣어 주세요', true); return; }
-    state.browserUrl = raw ? validUrl(raw) : ''; LS.set('browserUrl', state.browserUrl); el.value = state.browserUrl; applyBrowserLink();
-    toast(state.browserUrl ? '쿠키 갱신 접속 주소 저장됨' : '주소 비움 (서버 기본값 사용)');
+    const fields = { novncUrl: $('#setNovncUrl'), browserUrl: $('#setBrowserUrl') };
+    for (const k in fields) { const raw = fields[k].value.trim(); if (raw && !validUrl(raw)) { toast('http:// 또는 https:// 로 시작하는 주소를 넣어 주세요', true); fields[k].focus(); return; } }
+    for (const k in fields) { const raw = fields[k].value.trim(); state[k] = raw ? validUrl(raw) : ''; LS.set(k, state[k]); fields[k].value = state[k]; }
+    applyLinks(); toast('바로가기 주소 저장됨');
   });
   $$('#pollChips .chip').forEach((c) => c.addEventListener('click', () => { state.pollMs = +c.dataset.s * 1000; LS.set('pollMs', state.pollMs); schedule(); $$('#pollChips .chip').forEach((x) => x.classList.toggle('active', x === c)); }));
   $('#setClipboard').addEventListener('change', (e) => { state.clipboard = e.target.checked; LS.set('clipboard', state.clipboard); });

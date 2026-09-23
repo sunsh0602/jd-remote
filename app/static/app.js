@@ -11,7 +11,7 @@
   };
   const state = {
     data: null, filter: LS.get('filter', 'all'), tab: LS.get('tab', 'downloads'), downloadRoot: '',
-    pollMs: LS.get('pollMs', 3000),
+    pollMs: LS.get('pollMs', 3000), browserUrl: LS.get('browserUrl', ''), serverBrowserUrl: '',
     clipboard: LS.get('clipboard', true), lastClip: LS.get('lastClip', ''),
     speeds: new Array(60).fill(0), timer: null, inflight: false, expanded: new Set(), openPkg: null,
   };
@@ -82,7 +82,7 @@
     $$('[data-banner]').forEach((el) => el.addEventListener('click', () => b[+el.dataset.banner].a.onclick()));
     $('#linkNovnc').hidden = !jd.novncUrl; if (jd.novncUrl) $('#linkNovnc').href = jd.novncUrl;
     $('#linkDsm').hidden = !jd.dsmUrl; if (jd.dsmUrl) $('#linkDsm').href = jd.dsmUrl;
-    $('#linkBrowser').hidden = !jd.browserUrl; if (jd.browserUrl) $('#linkBrowser').href = jd.browserUrl;
+    state.serverBrowserUrl = jd.browserUrl || ''; applyBrowserLink();
     if (jd.downloadRoot) { $('#dlRootText').textContent = '다운로드 폴더: ' + jd.downloadRoot; setDownloadRoot(jd.downloadRoot); }
     if (jd.pollMs && !LS.get('pollMs', null)) state.pollMs = jd.pollMs;
   }
@@ -317,7 +317,22 @@
   $('#spApply').addEventListener('click', () => { const mb = parseFloat($('#spValue').value); closeSheets(); act('속도 제한 적용', () => api('/speedlimit', { method: 'PUT', body: { enabled: $('#spEnabled').checked, limit: mb > 0 ? Math.round(mb * 1048576) : null } })); });
 
   // ── 설정 시트 ─────────────────────────────────────────────────────────
-  $('#settingsBtn').addEventListener('click', () => { $('#setPoll').value = Math.round(state.pollMs / 1000); $('#setClipboard').checked = state.clipboard; $('#settingsSheet').hidden = false; });
+  // 상단 🌐: 사용자가 설정에 넣은 주소가 우선, 없으면 서버(.env BROWSER_URL) 기본값, 둘 다 없으면 숨김
+  function effectiveBrowserUrl() { return state.browserUrl || state.serverBrowserUrl || ''; }
+  function applyBrowserLink() { const u = effectiveBrowserUrl(); $('#linkBrowser').hidden = !u; if (u) $('#linkBrowser').href = u; }
+  function validUrl(v) { try { const u = new URL(v); return /^https?:$/.test(u.protocol) ? u.href : ''; } catch (e) { return ''; } }
+  $('#settingsBtn').addEventListener('click', () => {
+    $('#setPoll').value = Math.round(state.pollMs / 1000); $('#setClipboard').checked = state.clipboard;
+    $('#setBrowserUrl').value = state.browserUrl;
+    $('#setBrowserHint').textContent = state.serverBrowserUrl ? `비우면 서버 기본값 사용: ${state.serverBrowserUrl}` : '서버 기본값이 없습니다. 주소를 넣으면 상단에 🌐 아이콘이 생깁니다.';
+    $('#settingsSheet').hidden = false;
+  });
+  $('#setBrowserUrl').addEventListener('change', (e) => {
+    const raw = e.target.value.trim();
+    if (raw && !validUrl(raw)) { toast('http:// 또는 https:// 로 시작하는 주소를 넣어 주세요', true); e.target.value = state.browserUrl; return; }
+    state.browserUrl = raw ? validUrl(raw) : ''; LS.set('browserUrl', state.browserUrl); e.target.value = state.browserUrl; applyBrowserLink();
+    toast(state.browserUrl ? '🌐 주소 저장됨' : '🌐 주소 비움 (서버 기본값 사용)');
+  });
   $('#setPoll').addEventListener('change', (e) => { state.pollMs = Math.max(1, Math.min(60, +e.target.value || 3)) * 1000; LS.set('pollMs', state.pollMs); schedule(); });
   $('#setClipboard').addEventListener('change', (e) => { state.clipboard = e.target.checked; LS.set('clipboard', state.clipboard); });
   function closeSheets() { $$('.sheet').forEach((s) => (s.hidden = true)); state.openPkg = null; }

@@ -139,6 +139,9 @@
     <div class="sheet-head"><h2>설정</h2><button class="icon-btn" data-close>✕</button></div>
     <label class="field"><span>갱신 주기 (초)</span><input id="setPoll" type="number" min="1" max="60" step="1"></label>
     <label class="check"><input type="checkbox" id="setClipboard" checked> 앱 열 때 클립보드 URL 감지</label>
+    <label class="field"><span>쿠키 갱신 크롬 주소 (상단 🌐 아이콘)</span>
+      <input id="setBrowserUrl" type="url" inputmode="url" autocapitalize="off" autocomplete="off" placeholder="https://… (비우면 서버 기본값, 없으면 아이콘 숨김)"></label>
+    <p class="muted small" id="setBrowserHint"></p>
     <div class="row">
       <a class="btn small" id="linkNovnc" href="#" target="_blank" rel="noopener">🖥 JD 화면(noVNC)</a>
       <a class="btn small" id="linkDsm" href="#" target="_blank" rel="noopener">🗂 DSM</a>

@@ -81,7 +81,6 @@
     $('#banners').innerHTML = b.map((x, i) => `<div class="banner ${x.k}"><span class="txt">${esc(x.t)}</span>${x.a ? (x.a.href ? `<a class="btn small" target="_blank" rel="noopener" href="${esc(x.a.href)}">${esc(x.a.label)}</a>` : `<button class="btn small" data-banner="${i}">${esc(x.a.label)}</button>`) : ''}</div>`).join('');
     $$('[data-banner]').forEach((el) => el.addEventListener('click', () => b[+el.dataset.banner].a.onclick()));
     $('#linkNovnc').hidden = !jd.novncUrl; if (jd.novncUrl) $('#linkNovnc').href = jd.novncUrl;
-    $('#linkDsm').hidden = !jd.dsmUrl; if (jd.dsmUrl) $('#linkDsm').href = jd.dsmUrl;
     state.serverBrowserUrl = jd.browserUrl || ''; applyBrowserLink();
     if (jd.downloadRoot) { $('#dlRootText').textContent = '다운로드 폴더: ' + jd.downloadRoot; setDownloadRoot(jd.downloadRoot); }
     if (jd.pollMs && !LS.get('pollMs', null)) state.pollMs = jd.pollMs;
@@ -322,7 +321,7 @@
   function applyBrowserLink() { const u = effectiveBrowserUrl(); $('#linkBrowser').hidden = !u; if (u) $('#linkBrowser').href = u; }
   function validUrl(v) { try { const u = new URL(v); return /^https?:$/.test(u.protocol) ? u.href : ''; } catch (e) { return ''; } }
   $('#settingsBtn').addEventListener('click', () => {
-    $('#setPoll').value = Math.round(state.pollMs / 1000); $('#setClipboard').checked = state.clipboard;
+    $$('#pollChips .chip').forEach((c) => c.classList.toggle('active', +c.dataset.s * 1000 === state.pollMs)); $('#setClipboard').checked = state.clipboard;
     $('#setBrowserUrl').value = state.browserUrl;
     $('#setBrowserHint').textContent = state.serverBrowserUrl ? `비우면 서버 기본값 사용: ${state.serverBrowserUrl}` : '서버 기본값이 없습니다. 주소를 넣으면 위에 쿠키 갱신 접속 버튼이 생깁니다.';
     $('#settingsSheet').hidden = false;
@@ -334,7 +333,7 @@
     state.browserUrl = raw ? validUrl(raw) : ''; LS.set('browserUrl', state.browserUrl); el.value = state.browserUrl; applyBrowserLink();
     toast(state.browserUrl ? '쿠키 갱신 접속 주소 저장됨' : '주소 비움 (서버 기본값 사용)');
   });
-  $('#setPoll').addEventListener('change', (e) => { state.pollMs = Math.max(1, Math.min(60, +e.target.value || 3)) * 1000; LS.set('pollMs', state.pollMs); schedule(); });
+  $$('#pollChips .chip').forEach((c) => c.addEventListener('click', () => { state.pollMs = +c.dataset.s * 1000; LS.set('pollMs', state.pollMs); schedule(); $$('#pollChips .chip').forEach((x) => x.classList.toggle('active', x === c)); }));
   $('#setClipboard').addEventListener('change', (e) => { state.clipboard = e.target.checked; LS.set('clipboard', state.clipboard); });
   function closeSheets() { $$('.sheet').forEach((s) => (s.hidden = true)); state.openPkg = null; }
   $$('.sheet').forEach((s) => { s.addEventListener('click', (e) => { if (e.target === s) closeSheets(); }); $$('[data-close]', s).forEach((b) => b.addEventListener('click', closeSheets)); });

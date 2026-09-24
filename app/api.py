@@ -395,14 +395,22 @@ async def package_move(uuid: int, body: MoveBody, request: Request) -> dict:
 
 @router.post("/packages/{uuid}/resume")
 async def package_resume(uuid: int, request: Request) -> dict:
-    await _guard(_jd(request).set_enabled(True, [], [uuid]))
-    return {"uuid": uuid, "enabled": True}
+    """항목 하나를 재개하면 실제로 받기 시작해야 한다: 활성화 + (전체 일시정지 모드면 해제) + 엔진 시작."""
+    jd = _jd(request)
+    await _guard(jd.set_enabled(True, [], [uuid]))
+    st = str(await _guard(jd.state())).upper()
+    if "PAUSE" in st:
+        await _guard(jd.pause(False))
+    started = await _ensure_running(jd)
+    return {"uuid": uuid, "enabled": True, "controllerStarted": started}
 
 
 @router.post("/links/retry")
 async def links_retry(ids: Ids, request: Request) -> dict:
-    await _guard(_jd(request).retry(ids.linkIds, ids.packageIds))
-    return {"ok": True}
+    jd = _jd(request)
+    await _guard(jd.retry(ids.linkIds, ids.packageIds))
+    started = await _ensure_running(jd)   # 재시도 역시 엔진이 꺼져 있으면 '대기'에 머문다
+    return {"ok": True, "controllerStarted": started}
 
 
 # ── 호스터 계정 ───────────────────────────────────────────────────────────

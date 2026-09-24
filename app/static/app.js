@@ -127,6 +127,7 @@
     $('#pkgEmpty').hidden = pk.length > 0 || !!verifying;
     $$('#pkgList .card-wrap').forEach(attachSwipe);
     $$('#pkgList .card-wrap').forEach(attachReorder);
+    $$('#pkgList [data-vmore]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); const li = b.closest('.card'); openVerifySheet(+li.dataset.vpid, li.dataset.job ? +li.dataset.job : null); }));
     $$('#pkgList [data-more]').forEach((b) => {
       b.addEventListener('pointerdown', (e) => e.stopPropagation());   // 스와이프 시작 방지
       b.addEventListener('click', (e) => { e.stopPropagation(); const p = (state.data.packages || []).find((q) => q.uuid === +b.closest('.card').dataset.uuid); if (p) openPkgSheet(p); });
@@ -172,7 +173,7 @@
     return [...byPkg.entries()].map(([pid, ls]) => {
       const p = pkgs.get(pid) || { name: ls[0].name || '(패키지)' };
       const done = ls.filter((l) => (l.availability || '').toUpperCase() === 'ONLINE').length;
-      return `<li class="card verifying"><div class="title"><span class="name">${esc(p.name)}</span><span class="tag waiting"><i class="spin"></i>검증 중</span></div>
+      return `<li class="card verifying" data-vpid="${pid}" data-job="${ls[0].jobId || ''}"><div class="title"><span class="name">${esc(p.name)}</span><span class="tag waiting"><i class="spin"></i>검증 중</span><button type="button" class="more" data-vmore aria-label="상세">⋯</button></div>
         <div class="bar"><i style="width:${Math.round(done / ls.length * 100)}%"></i></div>
         <div class="meta"><span>링크 ${ls.length}개 · ${fmtBytes(ls.reduce((a, l) => a + (l.bytesTotal || 0), 0))}</span><span>검증이 끝나면 자동으로 시작됩니다</span></div></li>`;
     }).join('');
@@ -237,6 +238,23 @@
       const np = (state.data.packages || []).find((q) => q.uuid === p.uuid);
       if (state.openPkg === p.uuid && np) renderPkgActions(np, removeMode);   // 시트는 그대로, 버튼만 새 상태로
     }));
+  }
+  // 검증 중(즉시 다운로드) 항목의 시트: 검증이 끝나지 않을 때 빠져나갈 길을 준다
+  function openVerifySheet(pid, jobId) {
+    const g = (state.data || {}).linkgrabber || {}; const ls = (g.links || []).filter((l) => l.packageUUID === pid);
+    const p = (g.packages || []).find((x) => x.uuid === pid) || { name: (ls[0] || {}).name || '(패키지)' };
+    state.openPkg = -pid;
+    $('#pkgSheetTitle').textContent = p.name; $('#pkgSheetPath').textContent = '즉시 다운로드 · 링크 검증 중 — 검증이 끝나면 자동으로 다운로드 목록으로 옮겨집니다';
+    const A = [];
+    if (jobId != null) A.push(['🧺 장바구니로 보내기 (자동 시작 취소)', () => api('/autostart/cancel', { method: 'POST', body: { jobId } })]);
+    A.push(['🗑 삭제 (링크 제거)', () => api('/linkgrabber/remove', { method: 'POST', body: { packageIds: [pid] } }), true]);
+    const btn = ([l, , danger], i) => `<button class="btn ${danger ? 'danger' : ''}${!danger && A.filter((x) => !x[2]).length === 1 ? ' span2' : ''}" data-i="${i}">${l}</button>`;
+    $('#pkgSheetActions').innerHTML = A.map((a, i) => a[2] ? '' : btn(a, i)).join('');
+    $('#pkgSheetDanger').innerHTML = A.map((a, i) => a[2] ? btn(a, i) : '').join(''); $('#pkgSheetDanger').hidden = false;
+    $$('#pkgSheetActions .btn, #pkgSheetDanger .btn').forEach((b) => b.addEventListener('click', async () => { const [l, fn] = A[+b.dataset.i]; closeSheets(); await act(l, fn); }));
+    $('#pkgSheetLinks').innerHTML = ls.map((l) => `<li class="card"><div class="title"><span class="name">${esc(l.name)}</span><span class="tag ${esc(l.availability || '')}">${esc(l.availability || '검증 중')}</span></div>
+      <div class="meta"><span>${fmtBytes(l.bytesTotal)}</span><span>${esc(l.host || '')}</span></div></li>`).join('') || '<li class="muted small">링크 없음</li>';
+    $('#pkgSheet').hidden = false;
   }
   async function refreshNow() {
     try { state.data = await api('/state'); renderTop(state.data); renderPackages(); renderGrabber(); } catch (e) {}

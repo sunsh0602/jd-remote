@@ -121,10 +121,13 @@ class JDClient:
 
     # ── 링크그래버 ────────────────────────────────────────────────────────
     async def add_links(self, links: list[str], package_name: str | None = None,
-                        dest_folder: str | None = None, autostart: bool = False) -> Any:
+                        dest_folder: str | None = None, autostart: bool = False, assign_job_id: bool = False) -> Any:
+        """assign_job_id=True 면 응답에 LinkCollectingJob 의 id 가 온다 → 그 작업의 링크만 jobUUIDs 로 골라낼 수 있다.
+        주의: JD 의 autostart=True 는 검증이 끝난 장바구니 '전체'를 확정해 버리므로 즉시 다운로드에는 쓰지 않는다."""
         q: dict[str, Any] = {
             "links": "\n".join(links),
             "autostart": autostart,
+            "assignJobID": assign_job_id,
             "autoExtract": False,
             "overwritePackagizerRules": False,
         }
@@ -139,6 +142,10 @@ class JDClient:
 
     async def grabber_links(self) -> list[dict]:
         return await self.call("linkgrabberv2/queryLinks", dict(GRABBER_LINK_FIELDS)) or []
+
+    async def grabber_links_by_jobs(self, job_ids: list[int]) -> list[dict]:
+        """특정 addLinks 작업(job)으로 들어온 링크만."""
+        return await self.call("linkgrabberv2/queryLinks", {**GRABBER_LINK_FIELDS, "jobUUIDs": job_ids}) or []
 
     async def grabber_packages(self) -> list[dict]:
         return await self.call("linkgrabberv2/queryPackages", dict(GRABBER_PACKAGE_FIELDS)) or []

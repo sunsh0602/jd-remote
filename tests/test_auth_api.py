@@ -172,22 +172,20 @@ def test_cookie_expiry_store_survives_unwritable_path(monkeypatch):
     assert cookie_meta.get_expiry("terabox.com") is None
 
 
-# ── 즉시 다운로드 검증 중 판정 (_is_autostart) ──────────────────────────
-def test_is_autostart_url_match_and_offline():
-    from app.api import _is_autostart
-    pend = {"https://x.example/a": 1000.0}
-    assert _is_autostart({"url": "https://x.example/a", "availability": "UNKNOWN"}, pend) is True
-    assert _is_autostart({"url": "https://x.example/a", "availability": "OFFLINE"}, pend) is False   # 오프라인은 장바구니로
-    assert _is_autostart({"url": "https://y.example/b", "availability": "ONLINE"}, pend) is False
-    assert _is_autostart({"url": "https://x.example/a"}, {}) is False
+# ── 즉시 다운로드: 작업(job) 링크 중 무엇을 옮기고 언제 끝내는가 ─────────────
+def test_plan_autostart_moves_online_waits_unknown():
+    from app.api import plan_autostart
+    links = [{"uuid": 1, "availability": "ONLINE"}, {"uuid": 2, "availability": "UNKNOWN"}, {"uuid": 3, "availability": "OFFLINE"}]
+    move, done = plan_autostart(links)
+    assert move == [1] and done is False          # 2번이 아직 검증 중 → 작업 유지
 
 
-def test_is_autostart_added_date_window():
-    from app.api import _is_autostart
-    pend = {"https://x.example/a": 1000.0}
-    # JD 가 URL 을 바꿔 놓아도 추가 시각이 60초 안이면 즉시 다운로드로 본다
-    assert _is_autostart({"url": "https://cdn.example/normalized", "addedDate": 1030 * 1000}, pend) is True
-    assert _is_autostart({"url": "https://cdn.example/normalized", "addedDate": 1200 * 1000}, pend) is False
+def test_plan_autostart_finishes_when_nothing_checking():
+    from app.api import plan_autostart
+    assert plan_autostart([{"uuid": 1, "availability": "ONLINE"}]) == ([1], True)
+    assert plan_autostart([{"uuid": 3, "availability": "OFFLINE"}, {"uuid": 4, "availability": "TEMP_UNKNOWN"}]) == ([], True)   # 장바구니에 남김
+    assert plan_autostart([]) == ([], True)
+    assert plan_autostart([{"uuid": 5}]) == ([], False)   # availability 없음 = 아직 모름
 
 
 # ── 상태 분류: 실패 vs 조치 필요 ──────────────────────────────────────────

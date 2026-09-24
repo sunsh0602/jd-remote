@@ -116,30 +116,50 @@ def _pkg_view(request: Request, p: dict) -> dict:
     }
 
 
-AUTOSTART_TTL = 600.0   # 즉시 다운로드 표시를 유지하는 최대 시간(초). 이 안에 검증이 끝나면 JD 가 알아서 다운로드로 옮긴다.
+AUTOSTART_TTL = 600.0   # 즉시 다운로드 작업을 추적하는 최대 시간(초). 넘으면 남은 링크는 장바구니에 그대로 둔다.
 
 
-def _pending(request: Request) -> dict[str, float]:
+def _pending_jobs(request: Request) -> dict[int, dict]:
+    """즉시 다운로드로 추가한 JD 작업(job) 목록: job_id → {"ts": 요청 시각, "links": 아직 검증 중인 링크 uuid 집합}."""
     st = request.app.state
-    if not hasattr(st, "autostart_pending"):
-        st.autostart_pending = {}
+    if not hasattr(st, "autostart_jobs"):
+        st.autostart_jobs = {}
     now = time.time()
-    for u, ts in list(st.autostart_pending.items()):
-        if now - ts > AUTOSTART_TTL:
-            del st.autostart_pending[u]
-    return st.autostart_pending
+    for j, info in list(st.autostart_jobs.items()):
+        if now - info.get("ts", 0) > AUTOSTART_TTL:
+            del st.autostart_jobs[j]
+    return st.autostart_jobs
 
 
-def _is_autostart(l: dict, pending: dict[str, float]) -> bool:
-    """장바구니(링크그래버)의 링크가 '즉시 다운로드'로 들어와 검증 중인 것인지.
-    URL 이 일치하면 확실. JD 가 URL 을 정규화해 바꿔 놓는 경우가 있어, 그때는 추가 시각이 즉시 다운로드
-    요청 시각과 60초 안에 겹치는지로 판단한다. 오프라인으로 판정된 링크는 JD 가 옮기지 않으므로 장바구니로 돌려보낸다."""
-    if not pending or (l.get("availability") or "").upper() == "OFFLINE":
-        return False
-    if (l.get("url") or "") in pending:
-        return True
-    added = (l.get("addedDate") or 0) / 1000.0
-    return added > 0 and any(abs(added - ts) <= 60 for ts in pending.values())
+def plan_autostart(links: list[dict]) -> tuple[list[int], bool]:
+    """한 작업의 장바구니 링크들을 보고 (지금 다운로드로 옮길 uuid 목록, 작업 종료 여부) 를 정한다.
+    ONLINE → 옮긴다. UNKNOWN → 아직 검증 중이니 기다린다. OFFLINE/TEMP_UNKNOWN → 옮기지 않고 장바구니에 남긴다(사용자가 본다).
+    검증 중인 링크가 하나도 남지 않으면 작업 종료."""
+    move = [l["uuid"] for l in links if (l.get("availability") or "").upper() == "ONLINE"]
+    checking = any((l.get("availability") or "UNKNOWN").upper() == "UNKNOWN" for l in links)
+    return move, not checking
+
+
+async def _process_autostart(jd: JDClient, jobs: dict[int, dict]) -> bool:
+    """폴링마다 호출. 즉시 다운로드 작업 중 검증이 끝난(ONLINE) 링크만 다운로드 목록으로 옮기고 컨트롤러를 켠다.
+    JD 의 autostart 플래그 대신 이렇게 하는 이유: 그 플래그는 장바구니의 다른 링크까지 전부 확정해 버린다."""
+    started = False
+    for j in list(jobs.keys()):
+        try:
+            links = await jd.grabber_links_by_jobs([j])
+        except (JDError, JDUnavailable):
+            continue
+        move, done = plan_autostart(links)
+        if move:
+            try:
+                await jd.grabber_move_to_downloads(move, [])
+                started = await _ensure_running(jd) or started
+            except (JDError, JDUnavailable):
+                continue
+        jobs[j]["links"] = {l["uuid"] for l in links if l["uuid"] not in move}
+        if done:
+            del jobs[j]
+    return started
 
 
 def _link_view(l: dict) -> dict:
@@ -175,6 +195,9 @@ async def _guard(coro):
 async def state(request: Request) -> dict[str, Any]:
     jd = _jd(request)
     s = _settings(request)
+    jobs = _pending_jobs(request)
+    if jobs:
+        await _process_autostart(jd, jobs)      # 검증 끝난 즉시 다운로드 링크를 먼저 옮긴 뒤 상태를 읽는다
     try:
         st, pkgs, glinks, gpkgs, collecting, limit, caps, accts = await asyncio.gather(
             jd.state(), jd.packages(), jd.grabber_links(), jd.grabber_packages(),
@@ -190,12 +213,13 @@ async def state(request: Request) -> dict[str, Any]:
     views = [_pkg_view(request, p) for p in pkgs]
     speed = sum(v["speed"] for v in views)
     gp = {p.get("uuid"): p for p in gpkgs}
-    pending = _pending(request)
+    job_of: dict[int, int] = {u: j for j, info in jobs.items() for u in info.get("links", set())}
     glink_views = []
     autostart_pkgs: set = set()
     for l in glinks:
         v = _link_view(l)
-        v["autostart"] = _is_autostart(l, pending)
+        v["autostart"] = l.get("uuid") in job_of
+        v["jobId"] = job_of.get(l.get("uuid"))
         if v["autostart"]:
             autostart_pkgs.add(l.get("packageUUID"))
         glink_views.append(v)
@@ -277,17 +301,29 @@ async def add_links(body: AddLinks, request: Request) -> dict:
         raise HTTPException(400, "URL을 찾지 못했습니다.")
     s = _settings(request)
     dest = _dest_path(body.destFolder, s)
-    await _guard(_jd(request).add_links(urls, body.packageName or None, dest, body.autostart))
-    started = False
-    if body.autostart:
-        _pending(request).update({u: time.time() for u in urls})
-        started = await _ensure_running(_jd(request))
-    return {"added": len(urls), "urls": urls, "autostart": body.autostart, "controllerStarted": started}
+    # 즉시 다운로드도 JD 에는 autostart=False 로 넣는다. 작업 id 를 받아 두고, 폴링 때 그 작업의 링크만 옮긴다.
+    r = await _guard(_jd(request).add_links(urls, body.packageName or None, dest, autostart=False, assign_job_id=body.autostart))
+    job_id = (r or {}).get("id") if isinstance(r, dict) else None
+    if body.autostart and job_id is not None:
+        _pending_jobs(request)[int(job_id)] = {"ts": time.time(), "links": set()}
+    return {"added": len(urls), "urls": urls, "autostart": body.autostart, "jobId": job_id}
 
 
 class Ids(BaseModel):
     linkIds: list[int] = []
     packageIds: list[int] = []
+
+
+class JobBody(BaseModel):
+    jobId: int
+
+
+@router.post("/autostart/cancel")
+async def autostart_cancel(body: JobBody, request: Request) -> dict:
+    """즉시 다운로드 추적을 그만둔다. 링크는 장바구니에 그대로 남아 사용자가 직접 다룬다."""
+    jobs = _pending_jobs(request)
+    existed = jobs.pop(body.jobId, None) is not None
+    return {"cancelled": existed}
 
 
 @router.post("/linkgrabber/start")

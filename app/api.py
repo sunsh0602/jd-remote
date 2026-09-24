@@ -135,6 +135,10 @@ def plan_autostart(links: list[dict]) -> tuple[list[int], bool]:
     """한 작업의 장바구니 링크들을 보고 (지금 다운로드로 옮길 uuid 목록, 작업 종료 여부) 를 정한다.
     ONLINE → 옮긴다. UNKNOWN → 아직 검증 중이니 기다린다. OFFLINE/TEMP_UNKNOWN → 옮기지 않고 장바구니에 남긴다(사용자가 본다).
     검증 중인 링크가 하나도 남지 않으면 작업 종료."""
+    if not links:
+        # addLinks 직후 몇 초간은 크롤러가 아직 링크를 만들지 않아 비어 있다(실측 ~4초). 끝난 게 아니라 기다려야 한다.
+        # 정말 아무것도 나오지 않는 경우는 AUTOSTART_TTL 이 정리한다.
+        return [], False
     move = [l["uuid"] for l in links if (l.get("availability") or "").upper() == "ONLINE"]
     checking = any((l.get("availability") or "UNKNOWN").upper() == "UNKNOWN" for l in links)
     return move, not checking
@@ -349,7 +353,8 @@ async def grabber_remove(ids: Ids, request: Request) -> dict:
 async def grabber_clear_offline(request: Request) -> dict:
     jd = _jd(request)
     links = await _guard(jd.grabber_links())
-    bad = [l["uuid"] for l in links if (l.get("availability") or "").upper() in ("OFFLINE", "UNKNOWN")]
+    # UNKNOWN 은 '아직 검증 안 됨'이라 지우면 안 된다. 확정 오프라인만.
+    bad = [l["uuid"] for l in links if (l.get("availability") or "").upper() == "OFFLINE"]
     if bad:
         await _guard(jd.grabber_remove(bad, []))
     return {"removed": len(bad)}

@@ -184,7 +184,7 @@ def test_plan_autostart_finishes_when_nothing_checking():
     from app.api import plan_autostart
     assert plan_autostart([{"uuid": 1, "availability": "ONLINE"}]) == ([1], True)
     assert plan_autostart([{"uuid": 3, "availability": "OFFLINE"}, {"uuid": 4, "availability": "TEMP_UNKNOWN"}]) == ([], True)   # 장바구니에 남김
-    assert plan_autostart([]) == ([], True)
+    assert plan_autostart([]) == ([], False)   # 크롤러가 아직 링크를 안 만든 상태 → 기다린다
     assert plan_autostart([{"uuid": 5}]) == ([], False)   # availability 없음 = 아직 모름
 
 

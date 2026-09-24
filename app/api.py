@@ -85,7 +85,7 @@ def _pkg_view(request: Request, p: dict) -> dict:
     status = (p.get("status") or "").strip()
     finished = bool(p.get("finished"))
     running = bool(p.get("running")) or (p.get("speed") or 0) > 0
-    enabled = p.get("enabled", True)
+    enabled = bool(p.get("enabled", False))   # JD 는 false 를 생략한다: 없음 = 비활성
     reason = None
     if finished:
         kind = "finished"
@@ -155,7 +155,7 @@ def _link_view(l: dict) -> dict:
         "eta": l.get("eta"),
         "status": (l.get("status") or "").strip(),
         "finished": bool(l.get("finished")),
-        "enabled": l.get("enabled", True),
+        "enabled": bool(l.get("enabled", False)),
         "availability": l.get("availability"),
         "skipped": bool(l.get("skipped")),
     }
@@ -363,7 +363,7 @@ async def links_retry(ids: Ids, request: Request) -> dict:
 def _acct_view(a: dict) -> dict:
     v = {
         "uuid": a.get("uuid"), "hostname": a.get("hostname"), "username": a.get("username") or a.get("userName"),
-        "enabled": a.get("enabled", True), "valid": a.get("valid"), "error": a.get("error"),
+        "enabled": bool(a.get("enabled", False)), "valid": a.get("valid"), "error": a.get("error"),
         "validUntil": a.get("validUntil"), "trafficLeft": a.get("trafficLeft"), "trafficMax": a.get("trafficMax"),
     }
     # 쿠키 로그인 계정이면 '넣어 둔 쿠키가 언제까지 유효한지'가 실제로 중요한 날짜다.

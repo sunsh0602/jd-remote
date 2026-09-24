@@ -203,3 +203,14 @@ def test_classify_status_action_vs_failed():
     assert classify_status("Invalid URL") == ("failed", None)
     assert classify_status("Connecting…") == ("waiting", None)
     assert classify_status("") == ("waiting", None)
+
+
+# ── JD 는 false boolean 을 응답에서 생략한다: enabled 없음 = 비활성(일시정지) ───
+def test_pkg_view_missing_enabled_means_paused():
+    from types import SimpleNamespace
+    from app.api import _pkg_view
+    req = SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace(settings=SimpleNamespace(jd_output_prefix="/output", download_root="/vol/dl"))))
+    disabled = _pkg_view(req, {"uuid": 1, "name": "x", "bytesTotal": 10, "bytesLoaded": 0})           # enabled 생략
+    enabled = _pkg_view(req, {"uuid": 2, "name": "y", "bytesTotal": 10, "bytesLoaded": 0, "enabled": True})
+    assert disabled["enabled"] is False and disabled["kind"] == "paused"
+    assert enabled["enabled"] is True and enabled["kind"] == "waiting"

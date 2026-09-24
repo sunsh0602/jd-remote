@@ -19,7 +19,7 @@ def is_terabox(hostname: str | None) -> bool:
 
 
 def account_expired(a: dict) -> bool:
-    if not is_terabox(a.get("hostname")) or not a.get("enabled", True):
+    if not is_terabox(a.get("hostname")) or not a.get("enabled", False):   # JD 는 false 를 생략한다
         return False
     return a.get("valid") is False or bool(a.get("error"))
 

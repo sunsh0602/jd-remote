@@ -281,10 +281,12 @@
     if (!g) { ul.innerHTML = ''; $('#grabEmpty').hidden = false; $('#badgeGrab').hidden = true; return; }
     // 즉시 다운로드로 들어와 검증 중인 링크는 다운로드 탭에 '검증 중' 카드로 보이므로 장바구니에서는 뺀다(한 항목은 한 곳에만).
     const links = (g.links || []).filter((l) => !l.autostart);
-    $('#badgeGrab').hidden = links.length === 0; $('#badgeGrab').textContent = links.length;
-    $('#grabberInfo').textContent = links.length ? `장바구니 ${links.length}개 · ${fmtBytes(links.reduce((a, l) => a + (l.bytesTotal || 0), 0))}` : '장바구니 · 검증 후 시작';
     const byPkg = new Map();
     links.forEach((l) => { const k = l.packageUUID; if (!byPkg.has(k)) byPkg.set(k, []); byPkg.get(k).push(l); });
+    // 개수는 사용자가 담은 단위인 '패키지' 기준(다운로드 탭 배지와 같은 기준). 파일 수는 보조 정보.
+    const n = byPkg.size;
+    $('#badgeGrab').hidden = n === 0; $('#badgeGrab').textContent = n;
+    $('#grabberInfo').textContent = n ? `장바구니 ${n}개${links.length !== n ? ` · 파일 ${links.length}개` : ''} · ${fmtBytes(links.reduce((a, l) => a + (l.bytesTotal || 0), 0))}` : '장바구니 · 검증 후 시작';
     const pkgs = new Map((g.packages || []).map((p) => [p.uuid, p]));
     ul.innerHTML = [...byPkg.entries()].map(([pid, ls]) => {
       const p = pkgs.get(pid) || { name: '(패키지)', path: '' };

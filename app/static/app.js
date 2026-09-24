@@ -11,7 +11,7 @@
   };
   const state = {
     data: null, filter: LS.get('filter', 'all'), tab: LS.get('tab', 'downloads'), downloadRoot: '',
-    pollMs: LS.get('pollMs', 3000), browserUrl: LS.get('browserUrl', ''), novncUrl: LS.get('novncUrl', ''), server: { browserUrl: '', novncUrl: '' },
+    pollMs: LS.get('pollMs', 3000), reordering: false, browserUrl: LS.get('browserUrl', ''), novncUrl: LS.get('novncUrl', ''), server: { browserUrl: '', novncUrl: '' },
     clipboard: LS.get('clipboard', true), lastClip: LS.get('lastClip', ''),
     speeds: new Array(60).fill(0), timer: null, inflight: false, expanded: new Set(), openPkg: null,
   };
@@ -103,7 +103,7 @@
     return `<li class="card-wrap" data-uuid="${p.uuid}">
       <div class="card-bg"><span class="l">${p.enabled ? '⏸ 일시정지' : '▶ 재개'}</span><span class="r">🗑 삭제</span></div>
       <div class="card ${p.kind}" data-uuid="${p.uuid}">
-        <div class="title"><span class="name">${esc(p.name)}</span><span class="tag ${p.kind}">${label}${detail}</span></div>
+        <div class="title"><span class="handle" data-handle title="끌어서 순서 변경">☰</span><span class="name">${esc(p.name)}</span><span class="tag ${p.kind}">${label}${detail}</span><button type="button" class="more" data-more aria-label="상세">⋯</button></div>
         <div class="bar"><i style="width:${pct}%"></i></div>
         <div class="meta"><span>${pct}%</span>${meta.filter(Boolean).map((m) => `<span>${m}</span>`).join('')}</div>
       </div></li>`;
@@ -120,11 +120,48 @@
     // '링크 검증 없이 즉시 다운로드'로 넣은 링크: JD 가 검증을 마치면 자동으로 이 목록에 들어온다.
     // 그 사이에도 사용자가 "어디 갔지?" 하지 않도록 맨 위에 '검증 중' 카드로 보여준다(전체/진행중 필터에서).
     const verifying = (state.filter === 'all' || state.filter === 'verifying') ? verifyingCards() : '';
+    if (state.reordering) return;   // 끌고 있는 동안은 목록을 다시 그리지 않는다
     $('#pkgList').innerHTML = verifying + pk.map(pkgCard).join('');
     const EMPTY = { all: '다운로드가 없습니다.', verifying: '검증 중인 링크가 없습니다.', waiting: '대기 중인 다운로드가 없습니다.', running: '진행 중인 다운로드가 없습니다.', finished: '완료된 다운로드가 없습니다.', failed: '실패한 다운로드가 없습니다.', action: '조치가 필요한 다운로드가 없습니다.', paused: '일시정지된 다운로드가 없습니다.' };
     $('#pkgEmpty').textContent = EMPTY[state.filter] || '해당 상태의 다운로드가 없습니다.';
     $('#pkgEmpty').hidden = pk.length > 0 || !!verifying;
     $$('#pkgList .card-wrap').forEach(attachSwipe);
+    $$('#pkgList .card-wrap').forEach(attachReorder);
+    $$('#pkgList [data-more]').forEach((b) => {
+      b.addEventListener('pointerdown', (e) => e.stopPropagation());   // 스와이프 시작 방지
+      b.addEventListener('click', (e) => { e.stopPropagation(); const p = (state.data.packages || []).find((q) => q.uuid === +b.closest('.card').dataset.uuid); if (p) openPkgSheet(p); });
+    });
+  }
+
+  // ── 순서 변경: ☰ 손잡이를 세로로 끌어 놓으면 JD 목록 순서도 그대로 바뀐다 ─────────
+  function attachReorder(wrap) {
+    const handle = $('[data-handle]', wrap); if (!handle) return;
+    let active = false, wraps = [], ph = null;
+    handle.addEventListener('pointerdown', (e) => {
+      e.stopPropagation(); e.preventDefault();
+      active = true; state.reordering = true; vibrate();
+      handle.setPointerCapture(e.pointerId);
+      wrap.classList.add('lifting');
+    });
+    handle.addEventListener('pointermove', (e) => {
+      if (!active) return;
+      wraps = $$('#pkgList .card-wrap').filter((w) => w !== wrap);
+      const y = e.clientY;
+      let target = null;
+      for (const w of wraps) { const r = w.getBoundingClientRect(); if (y < r.top + r.height / 2) { target = w; break; } }
+      const list = $('#pkgList');
+      if (target) { if (target.previousElementSibling !== wrap) list.insertBefore(wrap, target); }
+      else if (list.lastElementChild !== wrap) list.appendChild(wrap);
+    });
+    const end = async () => {
+      if (!active) return; active = false; wrap.classList.remove('lifting');
+      const uuid = +wrap.dataset.uuid;
+      const prev = wrap.previousElementSibling;
+      const after = prev && prev.classList.contains('card-wrap') ? +prev.dataset.uuid : null;
+      state.reordering = false;
+      await act('순서 변경', () => api(`/packages/${uuid}/move`, { method: 'POST', body: { after } }));
+    };
+    handle.addEventListener('pointerup', end); handle.addEventListener('pointercancel', end);
   }
   function verifyingCards() {
     const g = (state.data || {}).linkgrabber; if (!g) return '';
@@ -177,6 +214,7 @@
     if (!removeMode) {
       A.push(p.enabled ? ['⏸ 일시정지', () => api(`/packages/${p.uuid}/pause`, { method: 'POST' })] : ['▶ 재개', () => api(`/packages/${p.uuid}/resume`, { method: 'POST' })]);
       if (p.kind === 'failed' || p.kind === 'paused' || p.kind === 'action') A.push(['🔁 재시도', () => api('/links/retry', { method: 'POST', body: { packageIds: [p.uuid] } })]);
+      if (p.kind !== 'finished') A.push(['⤒ 맨 위로 (먼저 받기)', () => api(`/packages/${p.uuid}/move`, { method: 'POST', body: { after: null } })]);
     }
     A.push(['🗑 목록에서 제거', () => api('/packages/remove', { method: 'POST', body: { packageIds: [p.uuid], deleteFiles: false } }), true]);
     A.push(['❌ 파일까지 삭제', async () => { if (!confirm(`"${p.name}"\n파일까지 완전히 삭제할까요?`)) throw new Error('취소'); return api('/packages/remove', { method: 'POST', body: { packageIds: [p.uuid], deleteFiles: true } }); }, true]);

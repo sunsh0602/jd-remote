@@ -107,6 +107,11 @@ class JDClient:
     async def cleanup_finished(self) -> Any:
         return await self.call("downloadsV2/cleanup", [], [], "DELETE_FINISHED", "REMOVE_LINKS_ONLY", "ALL")
 
+    async def move_packages(self, package_ids: list[int], after_package_id: int | None) -> Any:
+        """패키지를 after_package_id 바로 뒤로 옮긴다. None 이면 맨 위(JD 는 -1 을 '맨 위'로 해석).
+        JD 는 목록 위에서부터 받으므로 이 순서가 실제 다운로드 순서다."""
+        return await self.call("downloadsV2/movePackages", package_ids, -1 if after_package_id is None else after_package_id)
+
     async def set_enabled(self, enabled: bool, link_ids: list[int], package_ids: list[int]) -> Any:
         return await self.call("downloadsV2/setEnabled", enabled, link_ids, package_ids)
 

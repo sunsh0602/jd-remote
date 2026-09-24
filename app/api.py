@@ -347,6 +347,16 @@ async def package_pause(uuid: int, request: Request) -> dict:
     return {"uuid": uuid, "enabled": False}
 
 
+class MoveBody(BaseModel):
+    after: int | None = Field(None, description="이 패키지 바로 뒤로. 비우면 맨 위")
+
+
+@router.post("/packages/{uuid}/move")
+async def package_move(uuid: int, body: MoveBody, request: Request) -> dict:
+    await _guard(_jd(request).move_packages([uuid], body.after))
+    return {"uuid": uuid, "after": body.after}
+
+
 @router.post("/packages/{uuid}/resume")
 async def package_resume(uuid: int, request: Request) -> dict:
     await _guard(_jd(request).set_enabled(True, [], [uuid]))

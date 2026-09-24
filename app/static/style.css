@@ -160,7 +160,7 @@ details.adv .field{padding-top:4px}
 
 /* 상단 전체 시작/일시정지 아이콘 버튼 */
 .btn.ctl{min-width:var(--tap);padding:0 12px;font-size:15px;letter-spacing:-.05em}
-.btn.ctl.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.ctl:active{background:var(--accent);border-color:var(--accent);color:#fff}   /* 누르는 순간만 반응 */
 .btn.ctl:disabled{opacity:.4}
 /* 카드 왼쪽 원형 재생/일시정지 토글 (Transmission Remote 식) */
 .ptoggle{flex:none;width:36px;height:36px;border-radius:50%;border:2px solid var(--muted);background:transparent;color:var(--fg);font-size:12px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;margin:-2px 2px -2px -2px;letter-spacing:-.08em}

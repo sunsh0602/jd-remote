@@ -11,7 +11,7 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/static/icons/icon-192.png">
 <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
-<link rel="stylesheet" href="/static/style.css?v=32">
+<link rel="stylesheet" href="/static/style.css?v=33">
 </head>
 <body>
 <header class="top">
@@ -24,7 +24,9 @@
     <button class="icon-btn" id="settingsBtn" aria-label="설정">⚙</button>
   </div>
   <div class="top-row controls">
-    <button class="btn" id="btnToggleRun" data-state="">▶ 시작</button>
+    <!-- 전체 시작 / 전체 일시정지: Transmission Remote 처럼 두 아이콘. 현재 상태에 해당하는 쪽이 켜져(강조) 보인다 -->
+    <button class="btn ctl" id="btnStartAll" aria-label="전체 시작" title="전체 시작">▶</button>
+    <button class="btn ctl" id="btnPauseAll" aria-label="전체 일시정지" title="전체 일시정지">❚❚</button>
     <button class="btn" id="btnSpeedLimit" title="속도 제한">⚡ <span id="speedLimitText">—</span></button>
     <button class="btn" id="btnCleanup">🧹 완료 정리</button>
   </div>
@@ -216,6 +218,6 @@
 </div>
 
 <div class="toast" id="toast" hidden></div>
-<script src="/static/app.js?v=32"></script>
+<script src="/static/app.js?v=33"></script>
 </body>
 </html>

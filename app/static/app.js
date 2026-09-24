@@ -62,11 +62,10 @@
     dot.className = 'dot ' + (!jd.connected ? 'off' : jd.state === 'RUNNING' ? 'on' : jd.state && jd.state.includes('PAUSE') ? 'busy' : 'on');
     $('#speedText').textContent = jd.connected ? fmtSpeed(jd.speed || 0) : '연결 끊김';
     state.speeds.push(jd.speed || 0); state.speeds.shift(); drawSpark();
-    const run = $('#btnToggleRun');
-    if (!jd.connected) { run.textContent = '—'; run.dataset.state = ''; }
-    else if (jd.state === 'RUNNING') { run.textContent = '⏸ 일시정지'; run.dataset.state = 'pause'; }
-    else if ((jd.state || '').includes('PAUSE')) { run.textContent = '▶ 재개'; run.dataset.state = 'resume'; }
-    else { run.textContent = '▶ 시작'; run.dataset.state = 'start'; }
+    const running = jd.connected && jd.state === 'RUNNING', pausedAll = jd.connected && (jd.state || '').includes('PAUSE');
+    $('#btnStartAll').classList.toggle('on', running); $('#btnStartAll').disabled = !jd.connected;
+    $('#btnPauseAll').classList.toggle('on', pausedAll); $('#btnPauseAll').disabled = !jd.connected;
+    $('#btnStartAll').title = pausedAll ? '전체 재개' : '전체 시작';
     const sl = jd.speedlimit || {}; const slBtn = $('#btnSpeedLimit');
     $('#speedLimitText').textContent = sl.enabled ? (sl.limit / 1048576).toFixed(sl.limit % 1048576 ? 1 : 0) + ' MB/s' : '무제한';
     slBtn.classList.toggle('on', !!sl.enabled);
@@ -103,7 +102,7 @@
     return `<li class="card-wrap" data-uuid="${p.uuid}">
       <div class="card-bg"><span class="l">${p.enabled ? '⏸ 일시정지' : '▶ 재개'}</span><span class="r">🗑 삭제</span></div>
       <div class="card ${p.kind}" data-uuid="${p.uuid}">
-        <div class="title"><span class="handle" data-handle title="끌어서 순서 변경">☰</span><span class="name">${esc(p.name)}</span><span class="tag ${p.kind}">${label}${detail}</span><button type="button" class="more" data-more aria-label="상세">⋯</button></div>
+        <div class="title">${p.kind === 'finished' ? '<span class="ptoggle done" aria-hidden="true">✓</span>' : `<button type="button" class="ptoggle ${p.kind}" data-toggle aria-label="${p.enabled ? '일시정지' : '재개'}">${p.enabled ? '❚❚' : '▶'}</button>`}<span class="name">${esc(p.name)}</span><span class="tag ${p.kind}">${label}${detail}</span><span class="handle" data-handle title="끌어서 순서 변경">☰</span><button type="button" class="more" data-more aria-label="상세">⋯</button></div>
         <div class="bar"><i style="width:${pct}%"></i></div>
         <div class="meta"><span>${pct}%</span>${meta.filter(Boolean).map((m) => `<span>${m}</span>`).join('')}</div>
       </div></li>`;
@@ -128,6 +127,10 @@
     $$('#pkgList .card-wrap').forEach(attachSwipe);
     $$('#pkgList .card-wrap').forEach(attachReorder);
     $$('#pkgList [data-vmore]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); const li = b.closest('.card'); openVerifySheet(+li.dataset.vpid, li.dataset.job ? +li.dataset.job : null); }));
+    $$('#pkgList [data-toggle]').forEach((b) => {
+      b.addEventListener('pointerdown', (e) => e.stopPropagation());
+      b.addEventListener('click', (e) => { e.stopPropagation(); const p = (state.data.packages || []).find((q) => q.uuid === +b.closest('.card').dataset.uuid); if (p) act(p.enabled ? '일시정지' : '재개', () => api(`/packages/${p.uuid}/${p.enabled ? 'pause' : 'resume'}`, { method: 'POST' })); });
+    });
     $$('#pkgList [data-more]').forEach((b) => {
       b.addEventListener('pointerdown', (e) => e.stopPropagation());   // 스와이프 시작 방지
       b.addEventListener('click', (e) => { e.stopPropagation(); const p = (state.data.packages || []).find((q) => q.uuid === +b.closest('.card').dataset.uuid); if (p) openPkgSheet(p); });
@@ -417,7 +420,17 @@
   });
 
   // ── 상단 버튼 ─────────────────────────────────────────────────────────
-  $('#btnToggleRun').addEventListener('click', (e) => { const s = e.currentTarget.dataset.state; if (!s) return; act({ pause: '일시정지', resume: '재개', start: '시작' }[s], () => api('/control/' + s, { method: 'POST' })); });
+  $('#btnStartAll').addEventListener('click', () => {
+    const st = ((state.data || {}).jd || {}).state || '';
+    if (st === 'RUNNING') return toast('이미 전체 다운로드가 실행 중입니다');
+    const s = st.includes('PAUSE') ? 'resume' : 'start';
+    act(s === 'resume' ? '전체 재개' : '전체 시작', () => api('/control/' + s, { method: 'POST' }));
+  });
+  $('#btnPauseAll').addEventListener('click', () => {
+    const st = ((state.data || {}).jd || {}).state || '';
+    if (st !== 'RUNNING') return toast(st.includes('PAUSE') ? '이미 전체 일시정지 상태입니다' : '실행 중인 다운로드가 없습니다');
+    act('전체 일시정지', () => api('/control/pause', { method: 'POST' }));
+  });
   $('#btnCleanup').addEventListener('click', () => { const n = ((state.data && state.data.packages) || []).filter((p) => p.kind === 'finished').length; if (!n) return toast('완료된 항목이 없습니다'); if (confirm(`완료된 ${n}개를 목록에서 정리할까요? (파일은 유지)`)) act('완료 정리', () => api('/cleanup-finished', { method: 'POST' })); });
   $('#btnSpeedLimit').addEventListener('click', () => { const sl = (state.data && state.data.jd && state.data.jd.speedlimit) || {}; $('#spEnabled').checked = !!sl.enabled; $('#spValue').value = sl.limit ? +(sl.limit / 1048576).toFixed(1) : 10; $$('#spPresets .chip').forEach((c) => c.classList.toggle('active', sl.enabled && Math.round(sl.limit / 1048576) === +c.dataset.mb)); $('#speedSheet').hidden = false; });
   $$('#spPresets .chip').forEach((c) => c.addEventListener('click', () => { $('#spValue').value = c.dataset.mb; $('#spEnabled').checked = true; $$('#spPresets .chip').forEach((x) => x.classList.toggle('active', x === c)); }));

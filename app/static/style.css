@@ -146,7 +146,7 @@ details.adv .field{padding-top:4px}
 .add-help b.accent{color:var(--accent)}
 
 /* 다운로드 카드: ☰ 순서 손잡이, ⋯ 상세 버튼, 끌기 중 표시 */
-.handle{flex:none;color:var(--muted);font-size:16px;padding:2px 6px 2px 0;cursor:grab;touch-action:none}
+.handle{flex:none;color:var(--muted);font-size:16px;padding:2px 4px;cursor:grab;touch-action:none}
 .handle:active{cursor:grabbing}
 .more{flex:none;background:transparent;border:0;color:var(--muted);font-size:20px;line-height:1;width:32px;height:32px;border-radius:50%;cursor:pointer;margin:-6px -8px -6px 0}
 .more:active{background:var(--bg2)}
@@ -157,3 +157,16 @@ details.adv .field{padding-top:4px}
 .sp-presets{flex-wrap:wrap;overflow:visible;gap:6px}
 .sp-presets .chip{flex:1 1 calc(33.333% - 4px);min-width:0;display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 4px;line-height:1.15}
 .sp-presets .chip small{font-size:10px;opacity:.75}
+
+/* 상단 전체 시작/일시정지 아이콘 버튼 */
+.btn.ctl{min-width:var(--tap);padding:0 12px;font-size:15px;letter-spacing:-.05em}
+.btn.ctl.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.ctl:disabled{opacity:.4}
+/* 카드 왼쪽 원형 재생/일시정지 토글 (Transmission Remote 식) */
+.ptoggle{flex:none;width:36px;height:36px;border-radius:50%;border:2px solid var(--muted);background:transparent;color:var(--fg);font-size:12px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;margin:-2px 2px -2px -2px;letter-spacing:-.08em}
+.ptoggle.running{border-color:var(--accent);color:var(--accent)}
+.ptoggle.waiting{border-color:var(--warn);color:var(--warn)}
+.ptoggle.paused{border-color:var(--pause);color:var(--pause)}
+.ptoggle.failed,.ptoggle.action{border-color:var(--bad);color:var(--bad)}
+.ptoggle.done{border-color:var(--ok);color:var(--ok);font-size:16px}
+.ptoggle:active{background:var(--bg2)}

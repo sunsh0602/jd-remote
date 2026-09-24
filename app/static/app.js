@@ -62,10 +62,13 @@
     dot.className = 'dot ' + (!jd.connected ? 'off' : jd.state === 'RUNNING' ? 'on' : jd.state && jd.state.includes('PAUSE') ? 'busy' : 'on');
     $('#speedText').textContent = jd.connected ? fmtSpeed(jd.speed || 0) : '연결 끊김';
     state.speeds.push(jd.speed || 0); state.speeds.shift(); drawSpark();
-    const running = jd.connected && jd.state === 'RUNNING', pausedAll = jd.connected && (jd.state || '').includes('PAUSE');
+    // 상태 표시: 활성(받을 수 있는) 항목이 하나라도 있고 엔진이 돌면 ▶ 강조, 미완료 항목이 전부 일시정지면 ❚❚ 강조
+    const open = (d.packages || []).filter((p) => p.kind !== 'finished');
+    const anyActive = open.some((p) => p.enabled);
+    const running = jd.connected && jd.state === 'RUNNING' && anyActive;
+    const pausedAll = jd.connected && open.length > 0 && (!anyActive || (jd.state || '').includes('PAUSE'));
     $('#btnStartAll').classList.toggle('on', running); $('#btnStartAll').disabled = !jd.connected;
     $('#btnPauseAll').classList.toggle('on', pausedAll); $('#btnPauseAll').disabled = !jd.connected;
-    $('#btnStartAll').title = pausedAll ? '전체 재개' : '전체 시작';
     const sl = jd.speedlimit || {}; const slBtn = $('#btnSpeedLimit');
     $('#speedLimitText').textContent = sl.enabled ? (sl.limit / 1048576).toFixed(sl.limit % 1048576 ? 1 : 0) + ' MB/s' : '무제한';
     slBtn.classList.toggle('on', !!sl.enabled);
@@ -420,16 +423,16 @@
   });
 
   // ── 상단 버튼 ─────────────────────────────────────────────────────────
+  // 전체 시작 = 모든 미완료 항목 재개 + 엔진 시작 / 전체 일시정지 = 모든 미완료 항목 일시정지 (Transmission 과 같은 뜻)
   $('#btnStartAll').addEventListener('click', () => {
-    const st = ((state.data || {}).jd || {}).state || '';
-    if (st === 'RUNNING') return toast('이미 전체 다운로드가 실행 중입니다');
-    const s = st.includes('PAUSE') ? 'resume' : 'start';
-    act(s === 'resume' ? '전체 재개' : '전체 시작', () => api('/control/' + s, { method: 'POST' }));
+    const open = ((state.data || {}).packages || []).filter((p) => p.kind !== 'finished');
+    if (!open.length) return toast('받을 항목이 없습니다');
+    act('전체 시작', () => api('/control/start-all', { method: 'POST' }));
   });
   $('#btnPauseAll').addEventListener('click', () => {
-    const st = ((state.data || {}).jd || {}).state || '';
-    if (st !== 'RUNNING') return toast(st.includes('PAUSE') ? '이미 전체 일시정지 상태입니다' : '실행 중인 다운로드가 없습니다');
-    act('전체 일시정지', () => api('/control/pause', { method: 'POST' }));
+    const open = ((state.data || {}).packages || []).filter((p) => p.kind !== 'finished' && p.enabled);
+    if (!open.length) return toast('일시정지할 항목이 없습니다');
+    act('전체 일시정지', () => api('/control/pause-all', { method: 'POST' }));
   });
   $('#btnCleanup').addEventListener('click', () => { const n = ((state.data && state.data.packages) || []).filter((p) => p.kind === 'finished').length; if (!n) return toast('완료된 항목이 없습니다'); if (confirm(`완료된 ${n}개를 목록에서 정리할까요? (파일은 유지)`)) act('완료 정리', () => api('/cleanup-finished', { method: 'POST' })); });
   $('#btnSpeedLimit').addEventListener('click', () => { const sl = (state.data && state.data.jd && state.data.jd.speedlimit) || {}; $('#spEnabled').checked = !!sl.enabled; $('#spValue').value = sl.limit ? +(sl.limit / 1048576).toFixed(1) : 10; $$('#spPresets .chip').forEach((c) => c.classList.toggle('active', sl.enabled && Math.round(sl.limit / 1048576) === +c.dataset.mb)); $('#speedSheet').hidden = false; });

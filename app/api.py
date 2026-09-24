@@ -565,6 +565,24 @@ async def control(action: str, request: Request) -> dict:
         await _guard(jd.pause(False))
     elif action == "stop":
         await _guard(jd.stop())
+    elif action == "start-all":
+        # Transmission 의 '전체 시작': 완료되지 않은 패키지를 모두 활성화하고 컨트롤러를 켠다(일시정지 모드면 해제).
+        pkgs = await _guard(jd.packages())
+        ids = [p["uuid"] for p in pkgs if not p.get("finished")]
+        if ids:
+            await _guard(jd.set_enabled(True, [], ids))
+        st = str(await _guard(jd.state())).upper()
+        if "PAUSE" in st:
+            await _guard(jd.pause(False))
+        await _ensure_running(jd)
+        return {"state": await _guard(jd.state()), "resumed": len(ids)}
+    elif action == "pause-all":
+        # Transmission 의 '전체 일시정지': 완료되지 않은 패키지를 모두 비활성화(개별 일시정지와 같은 상태).
+        pkgs = await _guard(jd.packages())
+        ids = [p["uuid"] for p in pkgs if not p.get("finished") and p.get("enabled")]
+        if ids:
+            await _guard(jd.set_enabled(False, [], ids))
+        return {"state": await _guard(jd.state()), "paused": len(ids)}
     else:
         raise HTTPException(404, "알 수 없는 동작")
     return {"state": await _guard(jd.state())}

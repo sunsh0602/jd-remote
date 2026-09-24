@@ -62,9 +62,12 @@
     dot.className = 'dot ' + (!jd.connected ? 'off' : jd.state === 'RUNNING' ? 'on' : jd.state && jd.state.includes('PAUSE') ? 'busy' : 'on');
     $('#speedText').textContent = jd.connected ? fmtSpeed(jd.speed || 0) : '연결 끊김';
     state.speeds.push(jd.speed || 0); state.speeds.shift(); drawSpark();
-    // 상단 ▶/❚❚ 는 '명령' 버튼이다. 상태 색을 켜 두지 않는다(일부만 받는 혼합 상태를 색 하나로 못 나타내 오해를 낳는다).
-    // 상태는 카드의 원형 토글·필터 칩·속도 표시가 보여준다.
-    $('#btnStartAll').disabled = !jd.connected; $('#btnPauseAll').disabled = !jd.connected;
+    // 상단 ▶/❚❚ 는 '명령' 버튼이다. 상태 색을 켜 두지 않고, 대신 '지금 할 수 있는 일이 있는지'만 활성/비활성으로 보인다.
+    //   ▶ : 완료되지 않은 항목이 하나라도 있으면 활성 (일시정지된 것을 재개하거나, 대기 중인 것을 시작)
+    //   ❚❚: 활성(받는 중이거나 대기) 항목이 하나라도 있으면 활성
+    const open = (d.packages || []).filter((p) => p.kind !== 'finished');
+    $('#btnStartAll').disabled = !jd.connected || !open.some((p) => !p.enabled || p.kind === 'waiting' || jd.state !== 'RUNNING');
+    $('#btnPauseAll').disabled = !jd.connected || !open.some((p) => p.enabled);
     const sl = jd.speedlimit || {}; const slBtn = $('#btnSpeedLimit');
     $('#speedLimitText').textContent = sl.enabled ? (sl.limit / 1048576).toFixed(sl.limit % 1048576 ? 1 : 0) + ' MB/s' : '무제한';
     slBtn.classList.toggle('on', !!sl.enabled);
@@ -422,7 +425,7 @@
   // 전체 시작 = 모든 미완료 항목 재개 + 엔진 시작 / 전체 일시정지 = 모든 미완료 항목 일시정지 (Transmission 과 같은 뜻)
   $('#btnStartAll').addEventListener('click', () => {
     const open = ((state.data || {}).packages || []).filter((p) => p.kind !== 'finished');
-    if (!open.length) return toast('받을 항목이 없습니다');
+    if (!open.length) return toast('시작할 항목이 없습니다');
     act('전체 시작', async () => { const r = await api('/control/start-all', { method: 'POST' }); if (r && r.resumed != null) setTimeout(() => toast(`전체 시작 · ${r.resumed}개 재개`), 50); return r; });
   });
   $('#btnPauseAll').addEventListener('click', () => {

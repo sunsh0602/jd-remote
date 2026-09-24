@@ -205,11 +205,8 @@
   }
 
   // ── 패키지 시트 ───────────────────────────────────────────────────────
-  async function openPkgSheet(p, removeMode = false) {
-    state.openPkg = p.uuid;
-    $('#pkgSheetTitle').textContent = p.name;
-    $('#pkgSheetPath').textContent = p.path || '';
-    // 1행: 상태를 바꾸는 동작(일시정지/재개, 재시도)  ·  2행: 지우는 동작(목록에서 제거, 파일까지 삭제)
+  // 상태를 바꾸는 동작(일시정지/재개·재시도·맨 위로)은 시트를 유지하고 버튼만 갱신한다. 지우는 동작만 시트를 닫는다.
+  function renderPkgActions(p, removeMode) {
     const A = [];
     if (!removeMode) {
       A.push(p.enabled ? ['⏸ 일시정지', () => api(`/packages/${p.uuid}/pause`, { method: 'POST' })] : ['▶ 재개', () => api(`/packages/${p.uuid}/resume`, { method: 'POST' })]);
@@ -222,7 +219,24 @@
     $('#pkgSheetActions').innerHTML = A.map((a, i) => a[2] ? '' : btn(a, i)).join('');
     $('#pkgSheetDanger').innerHTML = A.map((a, i) => a[2] ? btn(a, i) : '').join('');
     $('#pkgSheetDanger').hidden = !A.some((a) => a[2]);
-    $$('#pkgSheetActions .btn, #pkgSheetDanger .btn').forEach((b) => b.addEventListener('click', async () => { const [l, fn] = A[+b.dataset.i]; closeSheets(); await act(l, fn); }));
+    $$('#pkgSheetActions .btn, #pkgSheetDanger .btn').forEach((b) => b.addEventListener('click', async () => {
+      const [l, fn, danger] = A[+b.dataset.i];
+      if (danger) { closeSheets(); await act(l, fn); return; }
+      b.disabled = true;
+      await act(l, fn);
+      await refreshNow();                       // 폴링 진행 여부와 무관하게 최신 상태를 받아
+      const np = (state.data.packages || []).find((q) => q.uuid === p.uuid);
+      if (state.openPkg === p.uuid && np) renderPkgActions(np, removeMode);   // 시트는 그대로, 버튼만 새 상태로
+    }));
+  }
+  async function refreshNow() {
+    try { state.data = await api('/state'); renderTop(state.data); renderPackages(); renderGrabber(); } catch (e) {}
+  }
+  async function openPkgSheet(p, removeMode = false) {
+    state.openPkg = p.uuid;
+    $('#pkgSheetTitle').textContent = p.name;
+    $('#pkgSheetPath').textContent = p.path || '';
+    renderPkgActions(p, removeMode);
     $('#pkgSheetLinks').innerHTML = '<li class="muted small">파일 목록 불러오는 중…</li>';
     $('#pkgSheet').hidden = false;
     try {

@@ -207,11 +207,20 @@
   // ── 패키지 시트 ───────────────────────────────────────────────────────
   // 상태를 바꾸는 동작(일시정지/재개·재시도·맨 위로)은 시트를 유지하고 버튼만 갱신한다. 지우는 동작만 시트를 닫는다.
   function renderPkgActions(p, removeMode) {
+    // 상태별로 의미 있는 동작만 보인다.
+    //   진행중/대기 : 일시정지 · 맨 위로        일시정지 : 재개 · 맨 위로
+    //   실패        : 재시도                    조치 필요 : 재시도 (원인을 푼 뒤)
+    //   완료        : (상태 동작 없음 — 정리만)
     const A = [];
     if (!removeMode) {
-      A.push(p.enabled ? ['⏸ 일시정지', () => api(`/packages/${p.uuid}/pause`, { method: 'POST' })] : ['▶ 재개', () => api(`/packages/${p.uuid}/resume`, { method: 'POST' })]);
-      if (p.kind === 'failed' || p.kind === 'paused' || p.kind === 'action') A.push(['🔁 재시도', () => api('/links/retry', { method: 'POST', body: { packageIds: [p.uuid] } })]);
-      if (p.kind !== 'finished') A.push(['⤒ 맨 위로 (먼저 받기)', () => api(`/packages/${p.uuid}/move`, { method: 'POST', body: { after: null } })]);
+      const pause = ['⏸ 일시정지', () => api(`/packages/${p.uuid}/pause`, { method: 'POST' })];
+      const resume = ['▶ 재개', () => api(`/packages/${p.uuid}/resume`, { method: 'POST' })];
+      const retry = ['🔁 재시도', () => api('/links/retry', { method: 'POST', body: { packageIds: [p.uuid] } })];
+      const top = ['⤒ 맨 위로 (먼저 받기)', () => api(`/packages/${p.uuid}/move`, { method: 'POST', body: { after: null } })];
+      if (p.kind === 'running' || p.kind === 'waiting') A.push(pause, top);
+      else if (p.kind === 'paused') A.push(resume, top);
+      else if (p.kind === 'failed' || p.kind === 'action') A.push(retry);
+      // finished: 상태를 바꿀 동작이 없다
     }
     A.push(['🗑 목록에서 제거', () => api('/packages/remove', { method: 'POST', body: { packageIds: [p.uuid], deleteFiles: false } }), true]);
     A.push(['❌ 파일까지 삭제', async () => { if (!confirm(`"${p.name}"\n파일까지 완전히 삭제할까요?`)) throw new Error('취소'); return api('/packages/remove', { method: 'POST', body: { packageIds: [p.uuid], deleteFiles: true } }); }, true]);

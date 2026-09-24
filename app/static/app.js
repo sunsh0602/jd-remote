@@ -399,8 +399,8 @@
   // ── 상단 버튼 ─────────────────────────────────────────────────────────
   $('#btnToggleRun').addEventListener('click', (e) => { const s = e.currentTarget.dataset.state; if (!s) return; act({ pause: '일시정지', resume: '재개', start: '시작' }[s], () => api('/control/' + s, { method: 'POST' })); });
   $('#btnCleanup').addEventListener('click', () => { const n = ((state.data && state.data.packages) || []).filter((p) => p.kind === 'finished').length; if (!n) return toast('완료된 항목이 없습니다'); if (confirm(`완료된 ${n}개를 목록에서 정리할까요? (파일은 유지)`)) act('완료 정리', () => api('/cleanup-finished', { method: 'POST' })); });
-  $('#btnSpeedLimit').addEventListener('click', () => { const sl = (state.data && state.data.jd && state.data.jd.speedlimit) || {}; $('#spEnabled').checked = !!sl.enabled; $('#spValue').value = sl.limit ? +(sl.limit / 1048576).toFixed(1) : 5; $('#speedSheet').hidden = false; });
-  $$('#spPresets .chip').forEach((c) => c.addEventListener('click', () => { $('#spValue').value = c.dataset.mb; $('#spEnabled').checked = true; }));
+  $('#btnSpeedLimit').addEventListener('click', () => { const sl = (state.data && state.data.jd && state.data.jd.speedlimit) || {}; $('#spEnabled').checked = !!sl.enabled; $('#spValue').value = sl.limit ? +(sl.limit / 1048576).toFixed(1) : 10; $$('#spPresets .chip').forEach((c) => c.classList.toggle('active', sl.enabled && Math.round(sl.limit / 1048576) === +c.dataset.mb)); $('#speedSheet').hidden = false; });
+  $$('#spPresets .chip').forEach((c) => c.addEventListener('click', () => { $('#spValue').value = c.dataset.mb; $('#spEnabled').checked = true; $$('#spPresets .chip').forEach((x) => x.classList.toggle('active', x === c)); }));
   $('#spApply').addEventListener('click', () => { const mb = parseFloat($('#spValue').value); closeSheets(); act('속도 제한 적용', () => api('/speedlimit', { method: 'PUT', body: { enabled: $('#spEnabled').checked, limit: mb > 0 ? Math.round(mb * 1048576) : null } })); });
 
   // ── 설정 시트 ─────────────────────────────────────────────────────────

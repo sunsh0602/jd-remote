@@ -11,7 +11,7 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/static/icons/icon-192.png">
 <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
-<link rel="stylesheet" href="/static/style.css?v=29">
+<link rel="stylesheet" href="/static/style.css?v=30">
 </head>
 <body>
 <header class="top">
@@ -188,13 +188,18 @@
 <div class="sheet" id="speedSheet" hidden>
   <div class="sheet-body">
     <div class="sheet-head"><h2>속도 제한</h2><button class="icon-btn" data-close>✕</button></div>
-    <label class="check"><input type="checkbox" id="spEnabled"> 속도 제한 사용</label>
-    <label class="field"><span>제한 값 (MB/s)</span><input id="spValue" type="number" min="0.1" step="0.5"></label>
-    <div class="chips" id="spPresets">
-      <button class="chip" data-mb="1">1</button><button class="chip" data-mb="3">3</button>
-      <button class="chip" data-mb="5">5</button><button class="chip" data-mb="10">10</button>
-      <button class="chip" data-mb="30">30</button>
+    <label class="sg-row"><span>속도 제한 사용</span><input type="checkbox" class="switch" id="spEnabled"></label>
+    <label class="field"><span>제한 값 (MB/s)</span><input id="spValue" type="number" min="0.1" step="0.5" inputmode="decimal"></label>
+    <!-- 가정용 회선 기준 프리셋: 회선의 절반~80% 정도로 잡으면 다른 기기 사용에 여유가 남는다 -->
+    <div class="chips sp-presets" id="spPresets">
+      <button type="button" class="chip" data-mb="6">6<small>100M 절반</small></button>
+      <button type="button" class="chip" data-mb="10">10<small>100M 80%</small></button>
+      <button type="button" class="chip" data-mb="30">30<small>500M 절반</small></button>
+      <button type="button" class="chip" data-mb="50">50<small>500M 80%</small></button>
+      <button type="button" class="chip" data-mb="60">60<small>1G 절반</small></button>
+      <button type="button" class="chip" data-mb="100">100<small>1G 80%</small></button>
     </div>
+    <p class="muted small">회선 최대치 참고 — 100M ≈ 12.5 MB/s · 500M ≈ 62 MB/s · 1G ≈ 125 MB/s. 끄면 제한 없이 받습니다.</p>
     <button class="btn primary wide" id="spApply">적용</button>
   </div>
 </div>
@@ -211,6 +216,6 @@
 </div>
 
 <div class="toast" id="toast" hidden></div>
-<script src="/static/app.js?v=29"></script>
+<script src="/static/app.js?v=30"></script>
 </body>
 </html>

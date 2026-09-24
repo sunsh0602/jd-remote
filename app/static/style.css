@@ -152,3 +152,8 @@ details.adv .field{padding-top:4px}
 .more:active{background:var(--bg2)}
 .card-wrap.lifting{opacity:.55;transform:scale(.98)}
 .card-wrap.lifting .card{border-color:var(--accent)}
+
+/* 속도 제한 프리셋: 값 + 회선 기준 설명, 세로 모드에서 3열 두 줄 */
+.sp-presets{flex-wrap:wrap;overflow:visible;gap:6px}
+.sp-presets .chip{flex:1 1 calc(33.333% - 4px);min-width:0;display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 4px;line-height:1.15}
+.sp-presets .chip small{font-size:10px;opacity:.75}

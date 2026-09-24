@@ -73,6 +73,8 @@
     // 배너
     const b = [];
     if (!jd.connected) b.push({ k: 'bad', t: 'JDownloader에 연결할 수 없습니다. ' + (jd.hint ? 'NAS에서: ' + jd.hint : ''), a: null });
+    // 컨트롤러가 꺼져 있는데 받을 것이 있으면: 무엇을 눌러야 하는지 바로 보여준다
+    if ((jd.state || '').startsWith('STOPPED') && (d.packages || []).some((p) => p.kind === 'waiting' || p.kind === 'running')) b.push({ k: 'warn', t: '다운로드가 정지되어 있습니다 — 대기 항목이 시작되지 않습니다', a: { onclick: () => act('시작', () => api('/control/start', { method: 'POST' })), label: '▶ 시작' } });
     if (jd.captchas > 0) b.push({ k: 'warn', t: `캡차 ${jd.captchas}개가 입력을 기다립니다`, a: effectiveUrl('novncUrl') ? { href: effectiveUrl('novncUrl'), label: 'JDownloader2(noVNC) 접속' } : null });
     if (jd.accountAlert) b.push({ k: 'bad', t: jd.accountAlert + ' — 계정 탭에서 쿠키를 갱신하세요', a: { onclick: () => showTab('accounts'), label: '계정 탭' } });
     if (d.linkgrabber && d.linkgrabber.collecting) b.push({ k: 'info', t: '링크를 확인하는 중…', a: null });

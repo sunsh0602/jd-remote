@@ -224,6 +224,19 @@ async def package_links(uuid: int, request: Request) -> list[dict]:
     return [_link_view(l) for l in links]
 
 
+async def _ensure_running(jd: JDClient) -> bool:
+    """JD 다운로드 컨트롤러가 정지(STOPPED) 상태면 켠다. 사용자가 '시작'을 눌렀는데 목록에만 옮겨지고
+    실제로는 돌지 않는 일을 막는다. (JD 는 받던 것이 모두 끝나면 컨트롤러를 스스로 멈춘다.)"""
+    try:
+        st = await jd.state()
+        if str(st).upper().startswith("STOPPED"):
+            await jd.start()
+            return True
+    except (JDError, JDUnavailable):
+        pass
+    return False
+
+
 def _dest_path(raw: str | None, s) -> str | None:
     """저장 위치 입력을 JD 내부 경로로 바꾼다. 없거나 기본 폴더면 None(=JD 기본 저장 위치).
 
@@ -265,9 +278,11 @@ async def add_links(body: AddLinks, request: Request) -> dict:
     s = _settings(request)
     dest = _dest_path(body.destFolder, s)
     await _guard(_jd(request).add_links(urls, body.packageName or None, dest, body.autostart))
+    started = False
     if body.autostart:
         _pending(request).update({u: time.time() for u in urls})
-    return {"added": len(urls), "urls": urls, "autostart": body.autostart}
+        started = await _ensure_running(_jd(request))
+    return {"added": len(urls), "urls": urls, "autostart": body.autostart, "controllerStarted": started}
 
 
 class Ids(BaseModel):
@@ -284,7 +299,8 @@ async def grabber_start(ids: Ids, request: Request) -> dict:
         if not link_ids:
             return {"moved": 0}
     await _guard(jd.grabber_move_to_downloads(link_ids, pkg_ids))
-    return {"moved": len(link_ids) or len(pkg_ids)}
+    started = await _ensure_running(jd)
+    return {"moved": len(link_ids) or len(pkg_ids), "controllerStarted": started}
 
 
 @router.post("/linkgrabber/remove")

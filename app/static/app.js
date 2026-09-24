@@ -305,7 +305,7 @@
     $$('[data-gstart]').forEach((b) => b.addEventListener('click', () => act('다운로드 시작', () => api('/linkgrabber/start', { method: 'POST', body: { packageIds: [+b.dataset.gstart] } }))));
     $$('[data-gremove]').forEach((b) => b.addEventListener('click', () => act('삭제', () => api('/linkgrabber/remove', { method: 'POST', body: { packageIds: [+b.dataset.gremove] } }))));
   }
-  $('#btnStartAll').addEventListener('click', () => act('전체 다운로드 시작', () => api('/linkgrabber/start', { method: 'POST', body: {} })));
+  $('#btnGrabStartAll').addEventListener('click', () => act('전체 다운로드 시작', () => api('/linkgrabber/start', { method: 'POST', body: {} })));
   $('#btnClearOffline').addEventListener('click', () => act('오프라인 링크 제거', () => api('/linkgrabber/clear-offline', { method: 'POST' })));
 
   // ── 추가 탭 ───────────────────────────────────────────────────────────

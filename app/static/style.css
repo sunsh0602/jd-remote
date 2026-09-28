@@ -178,3 +178,8 @@ details.adv .field{padding-top:4px}
 .fav-paths .chip.fav .lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
 .fav-paths .chip.fav .x{background:transparent;border:0;color:var(--muted);font-size:12px;width:22px;height:22px;border-radius:50%;cursor:pointer;flex:none}
 .fav-paths .chip.fav .x:active{background:var(--bg2);color:var(--bad)}
+
+/* 계정 카드: 프리미엄 배지 */
+.premium{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.08em;color:#fff;background:var(--accent);border-radius:999px;padding:2px 7px;vertical-align:1px}
+.premium.off{background:var(--muted)}
+.premium-note{color:var(--accent);font-size:11px;letter-spacing:.06em}

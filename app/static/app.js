@@ -374,6 +374,13 @@
   let accounts = [];
   const fmtDate = (ms) => (ms && ms > 0) ? new Date(ms).toLocaleDateString('ko-KR') : (ms === -1 ? '무기한' : '—');
   const daysLeft = (sec) => Math.ceil((sec * 1000 - Date.now()) / 86400000);
+  // validUntil = 호스터 프리미엄(구독) 만료. 값이 없거나 -1 이면 무료 계정/무기한으로 본다.
+  function premiumText(a) {
+    if (!(a.validUntil > 0)) return a.validUntil === -1 ? '<span class="premium">PREMIUM</span> 무기한' : '<span class="tag">FREE</span> 무료 계정';
+    const d = daysLeft(a.validUntil / 1000), when = fmtDate(a.validUntil);
+    if (d < 0) return `<span class="premium off">PREMIUM</span> 만료됨 <b>${when}</b>`;
+    return `<span class="premium">PREMIUM</span> <b>${when}</b>까지 · ${d}일 남음${d <= 7 ? ' — 곧 만료' : ''}`;
+  }
   // 쿠키 로그인은 넣어 둔 쿠키가 만료되면 끝난다. 가장 먼저 만료되는 인증 쿠키가 기준.
   function cookieExpiryText(a) {
     const d = daysLeft(a.cookieExpiry), when = fmtDate(a.cookieExpiry * 1000);
@@ -394,7 +401,7 @@
       const meta = [];
       if (a.cookieExpiry) meta.push(cookieExpiryText(a));
       if (!pending && a.valid) {
-        meta.push(`다음 확인 <b>${a.validUntil > 0 ? fmtDate(a.validUntil) : '정보 없음'}</b>`);
+        meta.push(premiumText(a));
         if (a.trafficMax > 0) meta.push(`트래픽 ${fmtBytes(a.trafficLeft)} / ${fmtBytes(a.trafficMax)}`);
         else if (a.trafficLeft === -1) meta.push('트래픽 무제한');
       } else if (pending) meta.push('JD가 계정을 확인하는 중입니다 — ↻ 갱신을 눌러 재검증');
@@ -406,7 +413,7 @@
   }
   function openAcctSheet(a) {
     if (!a) return;
-    $('#acctSheetTitle').textContent = a.hostname; $('#acctSheetInfo').textContent = `${a.username || ''} · 다음 확인 ${fmtDate(a.validUntil)}${a.error ? ' · ' + a.error : ''}`;
+    $('#acctSheetTitle').textContent = a.hostname; $('#acctSheetInfo').innerHTML = `${esc(a.username || '')} · ${premiumText(a)}${a.error ? ' · ' + esc(a.error) : ''}`;
     $('#acctEditUser').value = a.username || ''; $('#acctEditPass').value = ''; $('#acctEditCookie').value = ''; setCookieMode(isCookieHoster(a.hostname), 'acctEdit', isCookieHoster(a.hostname));
     const A = [
       [a.enabled ? '⏸ 사용 안 함' : '▶ 사용', () => api(`/accounts/${a.uuid}/${a.enabled ? 'disable' : 'enable'}`, { method: 'POST' })],

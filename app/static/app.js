@@ -11,7 +11,7 @@
   };
   const state = {
     data: null, filter: LS.get('filter', 'all'), tab: LS.get('tab', 'downloads'), downloadRoot: '',
-    pollMs: LS.get('pollMs', 3000), reordering: false, browserUrl: LS.get('browserUrl', ''), novncUrl: LS.get('novncUrl', ''), server: { browserUrl: '', novncUrl: '' },
+    pollMs: LS.get('pollMs', 3000), reordering: false, favPaths: LS.get('favPaths', []), browserUrl: LS.get('browserUrl', ''), novncUrl: LS.get('novncUrl', ''), server: { browserUrl: '', novncUrl: '' },
     clipboard: LS.get('clipboard', true), lastClip: LS.get('lastClip', ''),
     speeds: new Array(60).fill(0), timer: null, inflight: false, expanded: new Set(), openPkg: null,
   };
@@ -319,7 +319,28 @@
     const el = $('#addFolder'), prev = state.downloadRoot;
     state.downloadRoot = root;
     if (!el.value || el.value === prev) el.value = root;
+    if (root !== prev) renderFavPaths();
   }
+  // ── 자주 쓰는 저장 경로 ──────────────────────────────────────────────
+  // 칩 라벨은 기본 다운로드 폴더 아래면 그 이후 부분만(예: 영화/2026), 아니면 전체 경로.
+  const favLabel = (p) => { const r = (state.downloadRoot || '').replace(/\/+$/, ''); return r && p.startsWith(r + '/') ? p.slice(r.length + 1) : (p === r ? '기본 폴더' : p); };
+  const normPath = (p) => p.trim().replace(/\/+$/, '');
+  function renderFavPaths() {
+    const box = $('#favPaths');
+    const items = state.favPaths.map((p) => `<span class="chip fav" data-path="${esc(p)}" title="${esc(p)}"><span class="lbl">📁 ${esc(favLabel(p))}</span><button type="button" class="x" data-del="${esc(p)}" aria-label="삭제">✕</button></span>`);
+    box.innerHTML = items.join('');
+    box.hidden = !items.length;
+    $$('#favPaths .chip.fav .lbl').forEach((el) => el.addEventListener('click', () => { const p = el.parentElement.dataset.path; $('#addFolder').value = p; toast('저장 위치: ' + favLabel(p)); }));
+    $$('#favPaths [data-del]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); const p = b.dataset.del; state.favPaths = state.favPaths.filter((x) => x !== p); LS.set('favPaths', state.favPaths); renderFavPaths(); toast('자주 쓰는 경로에서 제거: ' + favLabel(p)); }));
+  }
+  $('#btnFavAdd').addEventListener('click', () => {
+    const p = normPath($('#addFolder').value);
+    if (!p) return toast('저장 위치를 먼저 입력하세요', true);
+    if (p === normPath(state.downloadRoot || '')) return toast('기본 다운로드 폴더는 항상 기본값이라 따로 저장할 필요가 없습니다');
+    if (state.favPaths.includes(p)) return toast('이미 자주 쓰는 경로에 있습니다');
+    state.favPaths = [...state.favPaths, p]; LS.set('favPaths', state.favPaths); renderFavPaths(); toast('자주 쓰는 경로에 추가: ' + favLabel(p));
+  });
+  renderFavPaths();
   // 장바구니에 담기 / 즉시 다운로드 — 버튼이 곧 선택. Enter(폼 submit)는 안전한 쪽(장바구니)으로.
   async function addLinks(autostart) {
     if (!extractUrls(addText.value).length) return;

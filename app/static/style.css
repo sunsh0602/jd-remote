@@ -170,3 +170,11 @@ details.adv .field{padding-top:4px}
 .ptoggle.failed,.ptoggle.action{border-color:var(--bad);color:var(--bad)}
 .ptoggle.done{border-color:var(--ok);color:var(--ok);font-size:16px}
 .ptoggle:active{background:var(--bg2)}
+
+/* 추가 탭: 자주 쓰는 저장 경로 칩 */
+.fav-paths{flex-wrap:wrap;overflow:visible;gap:6px;flex:none}
+.fav-paths[hidden]{display:none}
+.fav-paths .chip.fav{display:inline-flex;align-items:center;gap:6px;padding:4px 6px 4px 10px;max-width:100%;color:var(--fg)}
+.fav-paths .chip.fav .lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+.fav-paths .chip.fav .x{background:transparent;border:0;color:var(--muted);font-size:12px;width:22px;height:22px;border-radius:50%;cursor:pointer;flex:none}
+.fav-paths .chip.fav .x:active{background:var(--bg2);color:var(--bad)}

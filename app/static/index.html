@@ -11,7 +11,7 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/static/icons/icon-192.png">
 <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
-<link rel="stylesheet" href="/static/style.css?v=37">
+<link rel="stylesheet" href="/static/style.css?v=38">
 </head>
 <body>
 <header class="top">
@@ -80,8 +80,13 @@
       </div>
       <label class="field">
         <span>저장 위치 (기본 다운로드 폴더. 뒤에 하위 폴더를 붙일 수 있습니다)</span>
-        <input id="addFolder" type="text" placeholder="비우면 기본 다운로드 폴더">
+        <div class="row">
+          <input id="addFolder" type="text" placeholder="비우면 기본 다운로드 폴더" style="flex:1;min-width:0">
+          <button type="button" class="btn small" id="btnFavAdd" title="현재 저장 위치를 자주 쓰는 경로로 추가">＋ 저장</button>
+        </div>
       </label>
+      <!-- 자주 쓰는 경로: 사용자가 ＋로 추가한 칩. 누르면 저장 위치에 채워지고 ✕ 로 지운다(브라우저별 저장) -->
+      <div class="chips fav-paths" id="favPaths"></div>
       <!-- 두 가지 추가 방식을 버튼으로 바로 고른다(체크박스·팝업 없이 한 번의 탭) -->
       <div class="add-actions">
         <button type="button" class="btn success" id="btnAddCart" data-mode="cart">🧺 장바구니에 담기</button>
@@ -218,6 +223,6 @@
 </div>
 
 <div class="toast" id="toast" hidden></div>
-<script src="/static/app.js?v=37"></script>
+<script src="/static/app.js?v=38"></script>
 </body>
 </html>

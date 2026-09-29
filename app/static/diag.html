@@ -11,8 +11,8 @@ td{padding:8px 10px;border-top:1px solid var(--line);vertical-align:top;font-siz
 .ok{color:var(--ok)}.bad{color:var(--bad)}.warn{color:var(--warn)}#sent{margin-top:12px;font-size:13px;color:var(--muted)}
 </style></head><body>
 <h1>JDownloader2(noVNC) 접속 진단</h1>
-<p>이 폰 브라우저에서 noVNC 가 멈추는 원인을 확인합니다. 약 15초 걸립니다. 결과는 서버 로그로도 전송됩니다.</p>
-<table id="t"></table><div id="sent">진단 중…</div>
+<p>이 폰 브라우저에서 noVNC 가 멈추는 원인을 확인합니다. 약 40초 걸립니다. 결과는 서버 로그로도 전송됩니다.</p>
+<table id="t"></table><div id="frameBox" hidden style="margin-top:12px"><p>아래 작은 창이 noVNC 화면입니다. 화면이 보이면 정상입니다.</p><style>#frameBox iframe{width:100%;height:260px;border:1px solid var(--line);border-radius:12px;background:#000}</style></div><div id="sent">진단 중…</div>
 <script>
 (async () => {
   const rows = [], out = {};
@@ -61,6 +61,16 @@ td{padding:8px 10px;border-top:1px solid var(--line);vertical-align:top;font-siz
       w.onclose = (e) => { if (!done) { done = true; res('닫힘 code=' + e.code); } };
     }), 8000);
     put('WebSocket ' + wsUrl, ws === '__timeout__' ? '8초 동안 응답 없음' : ws, String(ws).startsWith('열림') ? 'ok' : 'bad');
+
+    // 가설 3: 페이지 문서 자체가 폰에서 끝까지 로드되지 않아 DOMContentLoaded 를 영원히 기다린다.
+    // noVNC 화면을 이 페이지 안에 작게 띄워, load 이벤트까지 걸린 시간을 잰다(서버 로그로 연결 여부를 대조).
+    const box = document.getElementById('frameBox'); box.hidden = false;
+    const fr = document.createElement('iframe'); fr.src = target + '/?diag=' + Date.now(); box.appendChild(fr);
+    const t0 = performance.now();
+    const loaded = await timeout(new Promise((res) => { fr.onload = () => res(Math.round(performance.now() - t0)); }), 20000);
+    put('noVNC 페이지 load (iframe)', loaded === '__timeout__' ? '20초 동안 load 이벤트 없음 → 문서/하위 리소스가 끝나지 않음' : `load ${loaded}ms`, loaded === '__timeout__' ? 'bad' : 'ok');
+    put('iframe 시작 시각', new Date().toISOString());
+    await new Promise((r) => setTimeout(r, 8000));   // 연결 시도할 시간
   }
 
   try {

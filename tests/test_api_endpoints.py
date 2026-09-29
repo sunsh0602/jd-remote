@@ -275,3 +275,16 @@ async def _noop(*_):
 def test_terabox_cookies_rejects_without_login_cookie(client):
     r = client.post("/api/accounts/terabox/cookies", json={"cookies": [{"name": "_ga", "expirationDate": 1}]})
     assert r.status_code == 400
+
+
+def test_clear_all_removes_cart_but_keeps_verifying_links(client):
+    f = client.fake
+    client.post("/api/links", json={"text": "https://x.example/a", "autostart": True})
+    f.grabber = [
+        {"uuid": 1, "packageUUID": 9, "availability": "ONLINE"},                       # 장바구니
+        {"uuid": 2, "packageUUID": 9, "availability": "OFFLINE"},                      # 장바구니
+        {"uuid": 12, "packageUUID": 100, "availability": "UNKNOWN", "job": 901},      # 즉시 다운로드 검증 중
+    ]
+    client.get("/api/state")                                                            # job 링크 추적 갱신
+    r = client.post("/api/linkgrabber/clear-all").json()
+    assert r["removed"] == 2 and [l["uuid"] for l in f.grabber] == [12]

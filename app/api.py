@@ -349,6 +349,18 @@ async def grabber_remove(ids: Ids, request: Request) -> dict:
     return {"ok": True}
 
 
+@router.post("/linkgrabber/clear-all")
+async def grabber_clear_all(request: Request) -> dict:
+    """장바구니 비우기. 즉시 다운로드로 검증 중인(다운로드 탭에 보이는) 링크는 장바구니 항목이 아니므로 남긴다."""
+    jd = _jd(request)
+    tracked = {u for info in _pending_jobs(request).values() for u in info.get("links", set())}
+    links = await _guard(jd.grabber_links())
+    ids = [l["uuid"] for l in links if l["uuid"] not in tracked]
+    if ids:
+        await _guard(jd.grabber_remove(ids, []))
+    return {"removed": len(ids)}
+
+
 @router.post("/linkgrabber/clear-offline")
 async def grabber_clear_offline(request: Request) -> dict:
     jd = _jd(request)

@@ -307,6 +307,13 @@
   }
   $('#btnGrabStartAll').addEventListener('click', () => act('전체 다운로드 시작', () => api('/linkgrabber/start', { method: 'POST', body: {} })));
   $('#btnClearOffline').addEventListener('click', () => act('오프라인 링크 제거', () => api('/linkgrabber/clear-offline', { method: 'POST' })));
+  $('#btnGrabClearAll').addEventListener('click', () => {
+    const g = (state.data || {}).linkgrabber || {}; const links = (g.links || []).filter((l) => !l.autostart);
+    const n = new Set(links.map((l) => l.packageUUID)).size;
+    if (!n) return toast('장바구니가 비어 있습니다');
+    if (!confirm(`장바구니 ${n}개(파일 ${links.length}개)를 모두 삭제할까요?\n(아직 받지 않은 링크만 지워지고 파일은 없습니다)`)) return;
+    act('장바구니 전체 삭제', () => api('/linkgrabber/clear-all', { method: 'POST' }));
+  });
 
   // ── 추가 탭 ───────────────────────────────────────────────────────────
   const addText = $('#addText');

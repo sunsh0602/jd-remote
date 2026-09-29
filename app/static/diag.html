@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JD Remote 진단</title>
+<style>
+:root{--bg:#0f1115;--fg:#e8eaf0;--muted:#8b93a5;--ok:#39c46b;--bad:#ff5d5d;--warn:#f5b342;--card:#1c2029;--line:#2a2f3a}
+@media (prefers-color-scheme: light){:root{--bg:#f6f7f9;--fg:#15171c;--muted:#5b6475;--card:#fff;--line:#dde1e8}}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,sans-serif;padding:16px}
+h1{font-size:18px;margin:0 0 4px}p{color:var(--muted);margin:0 0 12px;font-size:13px}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+td{padding:8px 10px;border-top:1px solid var(--line);vertical-align:top;font-size:13px;word-break:break-all}td:first-child{width:40%;color:var(--muted)}
+.ok{color:var(--ok)}.bad{color:var(--bad)}.warn{color:var(--warn)}#sent{margin-top:12px;font-size:13px;color:var(--muted)}
+</style></head><body>
+<h1>JDownloader2(noVNC) 접속 진단</h1>
+<p>이 폰 브라우저에서 noVNC 가 멈추는 원인을 확인합니다. 약 15초 걸립니다. 결과는 서버 로그로도 전송됩니다.</p>
+<table id="t"></table><div id="sent">진단 중…</div>
+<script>
+(async () => {
+  const rows = [], out = {};
+  const put = (k, v, cls = '') => { out[k] = v; rows.push(`<tr><td>${k}</td><td class="${cls}">${String(v).replace(/</g, '&lt;')}</td></tr>`); document.getElementById('t').innerHTML = rows.join(''); };
+  const timeout = (p, ms) => Promise.race([p, new Promise((r) => setTimeout(() => r('__timeout__'), ms))]);
+
+  put('userAgent', navigator.userAgent);
+  try { put('브라우저 브랜드', (navigator.userAgentData && navigator.userAgentData.brands || []).map((b) => b.brand + ' ' + b.version).join(', ') || '(정보 없음)'); } catch (e) { put('브라우저 브랜드', 'error ' + e.message); }
+  put('secure context', window.isSecureContext, window.isSecureContext ? 'ok' : 'bad');
+
+  // 가설 1: noVNC webutil.initSettings() 는 window.chrome.storage 가 있으면 콜백을 기다린다
+  const hasChrome = typeof window.chrome !== 'undefined';
+  put('window.chrome', hasChrome ? 'keys: ' + Object.keys(window.chrome).join(',') : '없음');
+  const hasStorage = !!(hasChrome && window.chrome.storage);
+  put('window.chrome.storage', hasStorage ? '있음 ← noVNC 가 여기서 대기함' : '없음 (정상)', hasStorage ? 'bad' : 'ok');
+  if (hasStorage) {
+    try {
+      const r = await timeout(new Promise((res) => window.chrome.storage.sync.get(res)), 3000);
+      put('chrome.storage.sync.get 응답', r === '__timeout__' ? '3초 동안 응답 없음 → noVNC 멈춤 원인 확정' : '응답함', r === '__timeout__' ? 'bad' : 'ok');
+    } catch (e) { put('chrome.storage.sync.get 응답', 'error ' + e.message, 'warn'); }
+  }
+
+  // 대상 주소: 설정에 저장한 값 > 서버 기본값
+  let target = '';
+  try { target = JSON.parse(localStorage.getItem('jdr.novncUrl') || '""'); } catch (e) {}
+  if (!target) { try { target = ((await (await fetch('/api/state', { credentials: 'same-origin' })).json()).jd || {}).novncUrl || ''; } catch (e) {} }
+  target = (target || '').replace(/\/+$/, '');
+  put('noVNC 주소', target || '(미설정)', target ? '' : 'bad');
+
+  if (target) {
+    // 가설 2: 모듈 파일이 폰까지 끝까지 오지 않음 → 몇 개를 직접 받아 걸린 시간을 잰다(no-cors, 쿠키 포함)
+    for (const p of ['/webdata.json', '/app/ui.js?v=6eedf932de', '/core/rfb.js', '/core/websock.js', '/core/display.js', '/vendor/pako/lib/zlib/inflate.js']) {
+      const t0 = performance.now();
+      try {
+        const r = await timeout(fetch(target + p, { mode: 'no-cors', credentials: 'include', cache: 'no-store' }), 8000);
+        const ms = Math.round(performance.now() - t0);
+        put('받기 ' + p, r === '__timeout__' ? '8초 초과 (멈춤)' : `완료 ${ms}ms`, r === '__timeout__' ? 'bad' : (ms > 3000 ? 'warn' : 'ok'));
+      } catch (e) { put('받기 ' + p, '실패 ' + e.message, 'bad'); }
+    }
+    // WebSocket: 로그인 쿠키로 실제 VNC 스트림이 열리는가(첫 12바이트 = RFB 버전 문자열)
+    const wsUrl = target.replace(/^http/, 'ws') + '/websockify';
+    const ws = await timeout(new Promise((res) => {
+      let done = false; const w = new WebSocket(wsUrl, ['binary']); w.binaryType = 'arraybuffer';
+      w.onmessage = (e) => { if (done) return; done = true; const s = new TextDecoder().decode(new Uint8Array(e.data).slice(0, 12)); w.close(); res('열림, 첫 데이터: ' + JSON.stringify(s)); };
+      w.onerror = () => { if (!done) { done = true; res('오류 (로그인 쿠키 없음 또는 차단)'); } };
+      w.onclose = (e) => { if (!done) { done = true; res('닫힘 code=' + e.code); } };
+    }), 8000);
+    put('WebSocket ' + wsUrl, ws === '__timeout__' ? '8초 동안 응답 없음' : ws, String(ws).startsWith('열림') ? 'ok' : 'bad');
+  }
+
+  try {
+    const r = await fetch('/api/diag', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(out) });
+    document.getElementById('sent').textContent = r.ok ? '완료 — 결과를 서버에 보냈습니다. 이 화면을 캡처해 주셔도 됩니다.' : '완료 — 서버 전송 실패(' + r.status + '). 이 화면을 캡처해 주세요.';
+  } catch (e) { document.getElementById('sent').textContent = '완료 — 서버 전송 실패. 이 화면을 캡처해 주세요.'; }
+})();
+</script></body></html>

@@ -613,6 +613,17 @@ async def control(action: str, request: Request) -> dict:
     return {"state": await _guard(jd.state())}
 
 
+@router.post("/diag")
+async def diag(request: Request) -> dict:
+    """/static/diag.html 이 폰 브라우저 환경 점검 결과를 보낸다. 서버 로그에만 남긴다(개인정보 없음: UA·기능 유무·타이밍)."""
+    try:
+        data = await request.json()
+    except ValueError:
+        raise HTTPException(400, "JSON 이 아닙니다.")
+    print("DIAG " + json.dumps(data, ensure_ascii=False)[:4000], flush=True)
+    return {"ok": True}
+
+
 class SpeedLimit(BaseModel):
     enabled: bool
     limit: int | None = Field(None, ge=0, description="bytes/s")

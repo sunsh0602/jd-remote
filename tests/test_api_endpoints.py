@@ -288,3 +288,10 @@ def test_clear_all_removes_cart_but_keeps_verifying_links(client):
     client.get("/api/state")                                                            # job 링크 추적 갱신
     r = client.post("/api/linkgrabber/clear-all").json()
     assert r["removed"] == 2 and [l["uuid"] for l in f.grabber] == [12]
+
+
+def test_diag_requires_auth_and_accepts_json(client, capsys):
+    assert client.post("/api/diag", json={"window.chrome.storage": "없음"}).json() == {"ok": True}
+    assert "DIAG" in capsys.readouterr().out
+    client.cookies.clear()
+    assert client.post("/api/diag", json={}).status_code == 401

@@ -62,6 +62,26 @@ td{padding:8px 10px;border-top:1px solid var(--line);vertical-align:top;font-siz
     }), 8000);
     put('WebSocket ' + wsUrl, ws === '__timeout__' ? '8초 동안 응답 없음' : ws, String(ws).startsWith('열림') ? 'ok' : 'bad');
 
+    // 가설 4(유력): noVNC core/util/browser.js 가 모듈 최상위에서 H.264 하드웨어 디코딩 시험(VideoDecoder.flush)을 기다린다.
+    // 폰의 디코더가 flush 를 끝내지 않으면 모든 모듈 평가가 멈추고 UI.start() 가 실행되지 않는다. 같은 시험을 해 본다.
+    if (!('VideoDecoder' in window)) { put('H.264 WebCodecs', 'VideoDecoder 없음 → noVNC 는 이 시험을 건너뜀', 'ok'); }
+    else {
+      const cfg = { codec: 'avc1.42401f', codedWidth: 1920, codedHeight: 1080, optimizeForLatency: true };
+      let t1 = performance.now();
+      const sup = await timeout(VideoDecoder.isConfigSupported(cfg).catch((e) => ({ err: e.message })), 5000);
+      put('H.264 isConfigSupported', sup === '__timeout__' ? '5초 무응답' : (sup.err ? 'error ' + sup.err : `supported=${sup.supported} (${Math.round(performance.now() - t1)}ms)`), sup === '__timeout__' ? 'bad' : '');
+      if (sup && sup.supported) {
+        const data = Uint8Array.from(atob('AAAAAWdCwBTZnpuAgICgAAADACAAAAZB4oVNAAAAAWjJYyyAAAABBgX//4HcRem95tlIt5Ys2CDZI+7veDI2NCAtIGNvcmUgMTY0IHIzMTA4IDMxZTE5ZjkgLSBILjI2NC9NUEVHLTQgQVZDIGNvZGVjIC0gQ29weWxlZnQgMjAwMy0yMDIzIC0gaHR0cDovL3d3dy52aWRlb2xhbi5vcmcveDI2NC5odG1sIC0gb3B0aW9uczogY2FiYWM9MCByZWY9NSBkZWJsb2NrPTE6MDowIGFuYWx5c2U9MHgxOjB4MTExIG1lPWhleCBzdWJtZT04IHBzeT0xIHBzeV9yZD0xLjAwOjAuMDAgbWl4ZWRfcmVmPTEgbWVfcmFuZ2U9MTYgY2hyb21hX21lPTEgdHJlbGxpcz0yIDh4OGRjdD0wIGNxbT0wIGRlYWR6b25lPTIxLDExIGZhc3RfcHNraXA9MSBjaHJvbWFfcXBfb2Zmc2V0PS0yIHRocmVhZHM9MSBsb29rYWhlYWRfdGhyZWFkcz0xIHNsaWNlZF90aHJlYWRzPTAgbnI9MCBkZWNpbWF0ZT0xIGludGVybGFjZWQ9MCBibHVyYXlfY29tcGF0PTAgY29uc3RyYWluZWRfaW50cmE9MCBiZnJhbWVzPTAgd2VpZ2h0cD0wIGtleWludD1pbmZpbml0ZSBrZXlpbnRfbWluPTI1IHNjZW5lY3V0PTQwIGludHJhX3JlZnJlc2g9MCByY19sb29rYWhlYWQ9NTAgcmM9YWJyIG1idHJlZT0xIGJpdHJhdGU9NDAwIHJhdGV0b2w9MS4wIHFjb21wPTAuNjAgcXBtaW49MCBxcG1heD02OSBxcHN0ZXA9NCBpcF9yYXRpbz0xLjQwIGFxPTE6MS4wMACAAAABZYiEBrxmKAAPVccAAS044AA5DRJMnkycJk4TPw=='), (c) => c.charCodeAt(0));
+        let got = false, derr = null;
+        const dec = new VideoDecoder({ output: (f) => { got = true; f.close(); }, error: (e) => { derr = e.message; } });
+        dec.configure(cfg); dec.decode(new EncodedVideoChunk({ timestamp: 0, type: 'key', data }));
+        t1 = performance.now();
+        const fl = await timeout(dec.flush().then(() => 'resolved').catch((e) => 'rejected: ' + e.message), 8000);
+        put('H.264 decoder.flush()', fl === '__timeout__' ? '8초 동안 끝나지 않음 → noVNC 멈춤 원인 확정' : `${fl} ${Math.round(performance.now() - t1)}ms, frame=${got}${derr ? ', error=' + derr : ''}`, fl === '__timeout__' ? 'bad' : 'ok');
+        try { dec.close(); } catch (e) {}
+      }
+    }
+
     // 가설 3: 페이지 문서 자체가 폰에서 끝까지 로드되지 않아 DOMContentLoaded 를 영원히 기다린다.
     // noVNC 화면을 이 페이지 안에 작게 띄워, load 이벤트까지 걸린 시간을 잰다(서버 로그로 연결 여부를 대조).
     const box = document.getElementById('frameBox'); box.hidden = false;

@@ -3,7 +3,7 @@
 jd-remote 는 NAS 의 JDownloader 2 를 폰에서 다루는 웹앱입니다. 이 문서는 Synology DSM 사용자를 대상으로,
 SSH 없이 **DSM 작업 스케줄러**만으로 설치하고 업데이트하는 방법을 설명합니다.
 
-- 이미지: `ghcr.io/bitsets/jd-remote:latest`
+- 이미지: Docker Hub `bitsets/jd-remote:latest` (linux/amd64)
 - 배포 방식: 작업 스케줄러에 "배포" 작업을 하나 만들어 두고 **수동 실행**합니다. 처음 실행하면 설치, 다시 실행하면 최신 이미지로 업데이트됩니다.
 
 ```
@@ -19,7 +19,7 @@ SSH 없이 **DSM 작업 스케줄러**만으로 설치하고 업데이트하는 
 |---|---|
 | DSM | 7.2 이상 |
 | 패키지 | Container Manager |
-| CPU | x86_64(Intel/AMD) 모델. ARM 모델은 배포된 이미지에 arm64 가 포함된 경우에만 동작합니다 |
+| CPU | x86_64(Intel/AMD) 모델. 현재 이미지는 linux/amd64 만 배포합니다(ARM 시놀로지 미지원) |
 | 도메인 | 폰에서 밖에서 쓰려면 DDNS(예: `xxx.synology.me`)와 인증서. 집 안에서만 쓰면 생략 가능 |
 
 > 아래 예시는 공유 폴더가 `/volume1/docker`, 다운로드 폴더가 `/volume1/Downloads` 라고 가정합니다.
@@ -139,7 +139,7 @@ TZ=Asia/Seoul
 # jd-remote 배포/업데이트 — 실행할 때마다 latest 이미지를 받아 컨테이너를 교체한다.
 set -e
 D=/usr/local/bin/docker
-IMAGE=ghcr.io/bitsets/jd-remote:latest
+IMAGE=bitsets/jd-remote:latest
 NAME=jd-remote
 ENV_FILE=/volume1/docker/jd-remote/.env
 
@@ -179,7 +179,7 @@ $D image prune -f >/dev/null 2>&1 || true
 
 ```
 healthz: {"ok":true,"jd":"IDLE"}
-jd-remote  Up 10 seconds (health: starting)  ghcr.io/bitsets/jd-remote:latest
+jd-remote  Up 10 seconds (health: starting)  bitsets/jd-remote:latest
 ```
 
 `"jd":"IDLE"`(또는 RUNNING) 대신 연결 오류가 보이면 1-4(RemoteAPI)와 `jdnet` 연결을 확인하세요.
@@ -216,7 +216,7 @@ latest 이미지를 다시 받아 컨테이너만 교체하며, `.env` 와 `jd-r
 받는 도중 바뀐 기능이 마음에 들지 않을 수 있으니 수동 실행을 권합니다.
 
 ### 특정 버전으로 고정·되돌리기
-스크립트의 `IMAGE=` 를 `ghcr.io/bitsets/jd-remote:<태그>` 로 바꿔 실행하면 그 버전으로 바뀝니다.
+스크립트의 `IMAGE=` 를 `bitsets/jd-remote:<태그>` 로 바꿔 실행하면 그 버전으로 바뀝니다.
 되돌린 뒤 다시 `latest` 로 바꾸면 최신으로 돌아옵니다.
 
 ---
@@ -229,7 +229,7 @@ latest 이미지를 다시 받아 컨테이너만 교체하며, `.env` 와 `jd-r
 | 상단에 "JDownloader에 연결할 수 없습니다" | 1-4 RemoteAPI 설정, `docker network connect jdnet jdownloader2` |
 | 재시작할 때마다 로그아웃 | `.env` 의 `JDR_SECRET` 이 비어 있지 않은지 |
 | 저장 위치 경로가 이상하게 보임 | `.env` 의 `DOWNLOAD_ROOT` 가 1-3 의 `/output` 마운트 경로와 같은지 |
-| 배포 작업이 `pull` 에서 실패 | NAS 의 인터넷 연결, 이미지 이름(`ghcr.io/bitsets/jd-remote:latest`) |
+| 배포 작업이 `pull` 에서 실패 | NAS 의 인터넷 연결, 이미지 이름(`bitsets/jd-remote:latest`) |
 | 폰에서 JD 화면(noVNC)이 로딩 바에서 멈춤 | 일부 안드로이드 기기의 H.264 디코더 문제(아래 "알려진 문제") |
 
 컨테이너 로그: 컨테이너 매니저 → 컨테이너 → `jd-remote` → 로그.
@@ -249,7 +249,7 @@ $D exec jdownloader2 sed -i 's|^supportsWebCodecsH264Decode = await _checkWebCod
 ## 5. 제거
 
 1. 작업 스케줄러에서 `jd-remote 배포` 삭제
-2. 컨테이너 매니저 → 컨테이너 `jd-remote` 중지 후 삭제, 이미지 `ghcr.io/bitsets/jd-remote` 삭제
+2. 컨테이너 매니저 → 컨테이너 `jd-remote` 중지 후 삭제, 이미지 `bitsets/jd-remote` 삭제
 3. (데이터까지 지우려면) 컨테이너 매니저 → 볼륨 `jd-remote-data` 삭제, `/volume1/docker/jd-remote` 폴더 삭제
 4. 리버스 프록시 항목 `jdr.<your-domain>` 삭제
 

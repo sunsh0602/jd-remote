@@ -1,6 +1,6 @@
 # jd-remote
 
-> **설치**: Synology NAS 사용자는 [INSTALL.md](INSTALL.md) — 작업 스케줄러로 설치·업데이트(`ghcr.io/bitsets/jd-remote:latest`).
+> **설치**: Synology NAS 사용자는 [INSTALL.md](INSTALL.md) — 작업 스케줄러로 설치·업데이트(`bitsets/jd-remote:latest`).
 
 JDownloader2를 폰에서 쓰기 위한 모바일 우선 웹앱(PWA). NAS Docker에서 JD 컨테이너 옆에 떠서
 JD 로컬 RemoteAPI(3128)를 호출한다. Transmission Remote처럼 **링크 추가 / 상태 / 완료 정리 / 일시정지·재개**가 목적.

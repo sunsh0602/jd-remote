@@ -183,3 +183,14 @@ details.adv .field{padding-top:4px}
 .premium{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.08em;color:#fff;background:var(--accent);border-radius:999px;padding:2px 7px;vertical-align:1px}
 .premium.off{background:var(--muted)}
 .premium-note{color:var(--accent);font-size:11px;letter-spacing:.06em}
+
+/* 추가 이력 */
+.history{margin-top:22px;padding-top:14px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:10px}
+.history-head{display:flex;align-items:center;gap:10px}
+.history-head h3{margin:0;font-size:12px;font-weight:600;letter-spacing:.06em;color:var(--muted);flex:none}
+.history-head input{flex:1;min-width:0;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:6px 10px;min-height:36px;color:var(--fg)}
+.card.hist .hlinks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.card.hist .hl{display:flex;align-items:center;gap:6px;font-size:13px}
+.card.hist .hl .u{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);user-select:text;-webkit-user-select:text}
+.icon-btn.sm{width:32px;height:32px;font-size:15px;flex:none}
+.card.hist .row-actions{display:flex;gap:6px;flex-wrap:wrap}

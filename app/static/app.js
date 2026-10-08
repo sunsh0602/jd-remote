@@ -44,6 +44,7 @@
     $$('.tab-btn').forEach((b) => b.classList.toggle('active', b.dataset.tab === name));
     window.scrollTo(0, 0);
     if (name === 'accounts') loadAccounts();
+    if (name === 'add') loadHistory(true);
   }
   $$('.tab-btn').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
 
@@ -353,8 +354,54 @@
     if (!extractUrls(addText.value).length) return;
     const body = { text: addText.value, destFolder: $('#addFolder').value.trim() || null, autostart };
     const r = await act('링크 추가', () => api('/links', { method: 'POST', body }));
-    if (r) { addText.value = ''; $('#addFolder').value = state.downloadRoot; updateCount(); showTab(autostart ? 'downloads' : 'grabber'); }
+    if (r) { addText.value = ''; $('#addFolder').value = state.downloadRoot; updateCount(); loadHistory(true); showTab(autostart ? 'downloads' : 'grabber'); }
   }
+
+  // ── 추가 이력 ─────────────────────────────────────────────────────────
+  const hist = { items: [], done: false, q: '' };
+  const fmtWhen = (ts) => { const d = new Date(ts * 1000), now = new Date(); const sameDay = d.toDateString() === now.toDateString(); const t = d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }); return sameDay ? '오늘 ' + t : d.toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' }) + ' ' + t; };
+  async function copyText(t, label) {
+    try { await navigator.clipboard.writeText(t); toast(label + ' 복사됨'); }
+    catch (e) { const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); toast(label + ' 복사됨'); } catch (e2) { toast('복사 실패', true); } ta.remove(); }
+  }
+  function histCard(h) {
+    const mode = h.autostart ? '<span class="tag running">⬇ 즉시</span>' : '<span class="tag finished">🧺 장바구니</span>';
+    const links = h.urls.map((u, i) => `<li class="hl"><span class="u" title="${esc(u)}">${esc(u)}</span><button type="button" class="icon-btn sm" data-copy="${h.id}:${i}" aria-label="복사">📋</button></li>`).join('');
+    return `<li class="card hist" data-hid="${h.id}">
+      <div class="title"><span class="name">${fmtWhen(h.ts)} · 링크 ${h.urls.length}개</span>${mode}</div>
+      ${h.dest ? `<div class="meta"><span>📁 ${esc(h.dest)}</span></div>` : ''}
+      <ul class="hlinks">${links}</ul>
+      <div class="row-actions">
+        <button type="button" class="btn small" data-copyall="${h.id}">📋 전체 복사</button>
+        <button type="button" class="btn small primary" data-readd="${h.id}">↻ 다시 추가</button>
+        <button type="button" class="btn small danger" data-hdel="${h.id}">삭제</button>
+      </div></li>`;
+  }
+  function renderHistory() {
+    $('#histList').innerHTML = hist.items.map(histCard).join('');
+    $('#histEmpty').hidden = hist.items.length > 0; $('#histMore').hidden = hist.done || !hist.items.length;
+    const find = (id) => hist.items.find((h) => h.id === +id);
+    $$('#histList [data-copy]').forEach((b) => b.addEventListener('click', () => { const [id, i] = b.dataset.copy.split(':'); copyText(find(id).urls[+i], '링크'); }));
+    $$('#histList [data-copyall]').forEach((b) => b.addEventListener('click', () => { const h = find(b.dataset.copyall); copyText(h.urls.join('\n'), `링크 ${h.urls.length}개`); }));
+    $$('#histList [data-readd]').forEach((b) => b.addEventListener('click', () => {
+      const h = find(b.dataset.readd);
+      addText.value = h.urls.join('\n'); $('#addFolder').value = h.dest || state.downloadRoot; updateCount();
+      window.scrollTo({ top: 0, behavior: 'smooth' }); addText.focus({ preventScroll: true });
+      toast('입력란에 채웠습니다 — 🧺 담기 또는 ⬇ 즉시 다운로드를 고르세요');
+    }));
+    $$('#histList [data-hdel]').forEach((b) => b.addEventListener('click', async () => {
+      if (!confirm('이 이력을 삭제할까요? (이미 추가된 다운로드에는 영향 없음)')) return;
+      try { await api('/history/' + b.dataset.hdel, { method: 'DELETE' }); hist.items = hist.items.filter((h) => h.id !== +b.dataset.hdel); renderHistory(); toast('이력 삭제'); } catch (e) { toast('삭제 실패: ' + e.message, true); }
+    }));
+  }
+  async function loadHistory(reset = false) {
+    if (reset) { hist.items = []; hist.done = false; }
+    const last = hist.items[hist.items.length - 1];
+    const qs = new URLSearchParams({ limit: 20 }); if (!reset && last) qs.set('before', last.id); if (hist.q) qs.set('q', hist.q);
+    try { const rows = await api('/history?' + qs); hist.items = hist.items.concat(rows); hist.done = rows.length < 20; renderHistory(); } catch (e) {}
+  }
+  $('#histMore').addEventListener('click', () => loadHistory(false));
+  let histT; $('#histQ').addEventListener('input', (e) => { clearTimeout(histT); histT = setTimeout(() => { hist.q = e.target.value.trim(); loadHistory(true); }, 300); });
   $('#btnAddCart').addEventListener('click', () => addLinks(false));
   $('#btnAddNow').addEventListener('click', () => addLinks(true));
   $('#addForm').addEventListener('submit', (e) => { e.preventDefault(); addLinks(false); });

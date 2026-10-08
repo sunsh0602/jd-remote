@@ -74,9 +74,10 @@ class FakeJD:
 
 @pytest.fixture
 def client(monkeypatch, tmp_path):
-    from app import cookie_meta
+    from app import cookie_meta, history
     from app.main import app
     monkeypatch.setattr(cookie_meta, "STORE_PATH", str(tmp_path / "cookie.json"))
+    monkeypatch.setattr(history, "DB_PATH", str(tmp_path / "history.db"))
     with TestClient(app) as c:
         fake = FakeJD()
         app.state.jd = fake
@@ -295,3 +296,39 @@ def test_diag_requires_auth_and_accepts_json(client, capsys):
     assert "DIAG" in capsys.readouterr().out
     client.cookies.clear()
     assert client.post("/api/diag", json={}).status_code == 401
+
+
+# ── 추가 이력 ────────────────────────────────────────────────────────────
+def test_history_records_each_add_with_mode_and_dest(client):
+    client.post("/api/links", json={"text": "a https://x.example/1 b https://x.example/2", "destFolder": "/vol/dl/영화"})
+    client.post("/api/links", json={"text": "https://y.example/3", "autostart": True})
+    rows = client.get("/api/history").json()
+    assert [r["urls"] for r in rows] == [["https://y.example/3"], ["https://x.example/1", "https://x.example/2"]]   # 최신 먼저
+    assert rows[0]["autostart"] is True and rows[1]["autostart"] is False
+    assert rows[1]["dest"] == "/vol/dl/영화" and rows[0]["dest"] is None
+    assert rows[0]["user"] == "tester"
+
+
+def test_history_search_paging_delete_clear(client):
+    for i in range(5):
+        client.post("/api/links", json={"text": f"https://h{i}.example/f"})
+    page1 = client.get("/api/history?limit=2").json()
+    page2 = client.get(f"/api/history?limit=2&before={page1[-1]['id']}").json()
+    assert [r["urls"][0] for r in page1 + page2] == [f"https://h{i}.example/f" for i in (4, 3, 2, 1)]
+    assert [r["urls"][0] for r in client.get("/api/history?q=h2.example").json()] == ["https://h2.example/f"]
+    assert client.delete(f"/api/history/{page1[0]['id']}").json()["deleted"] == page1[0]["id"]
+    assert client.delete(f"/api/history/{page1[0]['id']}").status_code == 404
+    assert client.delete("/api/history").json()["deleted"] == 4
+    assert client.get("/api/history").json() == []
+
+
+def test_history_failure_does_not_block_add(client, monkeypatch):
+    from app import history
+    monkeypatch.setattr(history, "DB_PATH", "/proc/nope/history.db")
+    r = client.post("/api/links", json={"text": "https://x.example/1"})
+    assert r.status_code == 200 and r.json()["historyId"] is None
+
+
+def test_history_requires_auth(client):
+    client.cookies.clear()
+    assert client.get("/api/history").status_code == 401

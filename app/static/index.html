@@ -11,7 +11,7 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/static/icons/icon-192.png">
 <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
-<link rel="stylesheet" href="/static/style.css?v=40">
+<link rel="stylesheet" href="/static/style.css?v=41">
 </head>
 <body>
 <header class="top">
@@ -98,6 +98,17 @@
         <b class="accent">⬇ 즉시 다운로드</b> — 장바구니를 거치지 않고 다운로드 목록에 넣습니다. 검증이 끝나면 자동으로 시작됩니다.
       </p>
     </form>
+
+    <!-- 추가 이력: 서버 SQLite. 링크 복사 / 다시 추가(입력란에 채움) / 삭제 -->
+    <section class="history" id="historyBox">
+      <div class="history-head">
+        <h3>추가 이력</h3>
+        <input id="histQ" type="search" placeholder="링크·경로 검색" autocomplete="off">
+      </div>
+      <ul class="list" id="histList"></ul>
+      <p class="empty small" id="histEmpty" hidden>추가 이력이 없습니다.</p>
+      <button type="button" class="btn small wide" id="histMore" hidden>더 보기</button>
+    </section>
   </section>
 
   <!-- 계정 탭 -->
@@ -224,6 +235,6 @@
 </div>
 
 <div class="toast" id="toast" hidden></div>
-<script src="/static/app.js?v=40"></script>
+<script src="/static/app.js?v=41"></script>
 </body>
 </html>

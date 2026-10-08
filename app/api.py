@@ -10,7 +10,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from . import cookie_meta
+from . import cookie_meta, history
 from .auth import require_api_auth
 from .jd_client import JDClient, JDError, JDUnavailable
 from .lock import LockState, is_terabox
@@ -310,7 +310,28 @@ async def add_links(body: AddLinks, request: Request) -> dict:
     job_id = (r or {}).get("id") if isinstance(r, dict) else None
     if body.autostart and job_id is not None:
         _pending_jobs(request)[int(job_id)] = {"ts": time.time(), "links": set()}
-    return {"added": len(urls), "urls": urls, "autostart": body.autostart, "jobId": job_id}
+    # 이력: 화면에 보인 저장 위치(사용자 입력) 그대로 남겨 '다시 추가' 때 그대로 채운다
+    user = request.app.state.auth.verify(request.app.state.auth.session_token(request))
+    hid = history.record(urls, body.autostart, (body.destFolder or "").strip() or None, user)
+    return {"added": len(urls), "urls": urls, "autostart": body.autostart, "jobId": job_id, "historyId": hid}
+
+
+# ── 추가 이력 ────────────────────────────────────────────────────────────
+@router.get("/history")
+async def history_list(limit: int = 30, before: int | None = None, q: str | None = None) -> list[dict]:
+    return history.list_(limit, before, (q or "").strip() or None)
+
+
+@router.delete("/history/{entry_id}")
+async def history_delete(entry_id: int) -> dict:
+    if not history.delete(entry_id):
+        raise HTTPException(404, "이력이 없습니다.")
+    return {"deleted": entry_id}
+
+
+@router.delete("/history")
+async def history_clear() -> dict:
+    return {"deleted": history.clear()}
 
 
 class Ids(BaseModel):
